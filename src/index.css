@@ -5,6 +5,52 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  :root {
+    --background: 240 6% 6%;
+    --foreground: 0 0% 97%;
+    --card: 240 4% 9%;
+    --card-foreground: 0 0% 97%;
+    --popover: 240 4% 9%;
+    --popover-foreground: 0 0% 97%;
+    --primary: 36 91% 55%;
+    --primary-foreground: 240 6% 6%;
+    --secondary: 240 6% 18%;
+    --secondary-foreground: 0 0% 97%;
+    --muted: 240 6% 18%;
+    --muted-foreground: 240 5% 60%;
+    --accent: 36 91% 55%;
+    --accent-foreground: 240 6% 6%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 97%;
+    --border: 240 8% 18%;
+    --input: 240 8% 18%;
+    --ring: 36 91% 55%;
+    --radius: 0.75rem;
+  }
+  .dark {
+    --background: 240 6% 6%;
+    --foreground: 0 0% 97%;
+    --card: 240 4% 9%;
+    --card-foreground: 0 0% 97%;
+    --popover: 240 4% 9%;
+    --popover-foreground: 0 0% 97%;
+    --primary: 36 91% 55%;
+    --primary-foreground: 240 6% 6%;
+    --secondary: 240 6% 18%;
+    --secondary-foreground: 0 0% 97%;
+    --muted: 240 6% 18%;
+    --muted-foreground: 240 5% 60%;
+    --accent: 36 91% 55%;
+    --accent-foreground: 240 6% 6%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 97%;
+    --border: 240 8% 18%;
+    --input: 240 8% 18%;
+    --ring: 36 91% 55%;
+  }
+}
+
 html, body, #root {
   height: 100%;
   background-color: #0C0C0E;
