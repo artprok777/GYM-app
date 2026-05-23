@@ -10,6 +10,13 @@ import {
 import type { ExerciseTemplate, LoggedSet } from "@/db/schema"
 import { formatWeight, formatLastSession } from "@/lib/format"
 import { cn } from "@/lib/utils"
+import { WheelPicker } from "./WheelPicker"
+
+const WEIGHT_VALUES = Array.from({ length: 401 }, (_, i) => Math.round(i * 5) / 10)
+
+function snapWeight(v: number): number {
+  return Math.round(v * 2) / 2
+}
 
 export function SetLoggerSheet({
   exercise,
@@ -22,7 +29,7 @@ export function SetLoggerSheet({
 }) {
   const [lastSets, setLastSets] = useState<LoggedSet[]>([])
   const [loggedSets, setLoggedSets] = useState<LoggedSet[]>([])
-  const [weight, setWeight] = useState("")
+  const [weight, setWeight] = useState(0)
   const [reps, setReps] = useState("")
   const [flashId, setFlashId] = useState<string | null>(null)
   const [seeded, setSeeded] = useState(false)
@@ -36,8 +43,10 @@ export function SetLoggerSheet({
     if (!seeded) {
       const seed = logged[logged.length - 1] ?? last[last.length - 1]
       if (seed) {
-        setWeight(formatWeight(seed.weight))
+        setWeight(snapWeight(seed.weight))
         setReps(String(seed.reps))
+      } else if (exercise.targetWeight) {
+        setWeight(snapWeight(exercise.targetWeight))
       }
       setSeeded(true)
     }
@@ -47,12 +56,6 @@ export function SetLoggerSheet({
     refresh()
   }, [])
 
-  function bumpWeight(delta: number) {
-    const current = parseFloat(weight.replace(",", ".")) || 0
-    const next = Math.max(0, current + delta)
-    setWeight(formatWeight(next))
-  }
-
   function bumpReps(delta: number) {
     const current = parseInt(reps, 10) || 0
     const next = Math.max(0, current + delta)
@@ -60,7 +63,7 @@ export function SetLoggerSheet({
   }
 
   async function handleAdd() {
-    const w = parseFloat(weight.replace(",", "."))
+    const w = weight
     const r = parseInt(reps, 10)
     if (!w || !r) return
     const set = await logSet(
@@ -133,16 +136,20 @@ export function SetLoggerSheet({
             </button>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <NumberField
-              label="КГ"
-              value={weight}
-              onChange={setWeight}
-              onIncrement={() => bumpWeight(2.5)}
-              onDecrement={() => bumpWeight(-2.5)}
-              inputMode="decimal"
-              step="0.5"
-            />
+          <div className="space-y-3">
+            {/* Weight drum picker */}
+            <div className="bg-bg border border-border rounded-xl overflow-hidden">
+              <p className="font-display text-[10px] uppercase tracking-[0.2em] text-text-secondary text-center pt-3 pb-1">
+                КГ
+              </p>
+              <WheelPicker
+                values={WEIGHT_VALUES}
+                value={weight}
+                onChange={setWeight}
+                formatValue={(v) => (v === Math.floor(v) ? String(v) : v.toFixed(1))}
+              />
+            </div>
+            {/* Reps with +/- */}
             <NumberField
               label="ПОВТОРИ"
               value={reps}

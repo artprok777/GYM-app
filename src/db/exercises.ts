@@ -12,6 +12,7 @@ export async function addExercise(
   workoutTypeId: string,
   name: string,
   targetSets: number,
+  targetWeight?: number,
 ): Promise<ExerciseTemplate> {
   const existing = await listExercises(workoutTypeId)
   const ex: ExerciseTemplate = {
@@ -19,6 +20,7 @@ export async function addExercise(
     workoutTypeId,
     name,
     targetSets,
+    ...(targetWeight != null && { targetWeight }),
     order: existing.length,
   }
   await db.exercises.add(ex)
@@ -27,7 +29,7 @@ export async function addExercise(
 
 export async function updateExercise(
   id: string,
-  patch: Partial<Pick<ExerciseTemplate, "name" | "targetSets">>,
+  patch: Partial<Pick<ExerciseTemplate, "name" | "targetSets" | "targetWeight">>,
 ): Promise<void> {
   await db.exercises.update(id, patch)
 }

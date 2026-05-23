@@ -6,10 +6,10 @@ import {
   listPrograms,
   createProgram,
   listWorkoutTypes,
-  addWorkoutType,
   renameWorkoutType,
   deleteWorkoutType,
 } from "@/db/programs"
+import { CreateWorkoutSheet } from "@/components/CreateWorkoutSheet"
 import type { Program, WorkoutType } from "@/db/schema"
 import { cn } from "@/lib/utils"
 
@@ -22,6 +22,7 @@ export function ProgramEditor({
   const [types, setTypes] = useState<WorkoutType[]>([])
   const [editingId, setEditingId] = useState<string | null>(null)
   const [draftName, setDraftName] = useState("")
+  const [showCreateSheet, setShowCreateSheet] = useState(false)
 
   async function refresh() {
     const programs = await listPrograms()
@@ -35,11 +36,9 @@ export function ProgramEditor({
     refresh()
   }, [])
 
-  async function handleAdd() {
+  function handleAdd() {
     if (!program) return
-    const nextLetter = String.fromCharCode(65 + types.length)
-    await addWorkoutType(program.id, `Тренування ${nextLetter}`)
-    await refresh()
+    setShowCreateSheet(true)
   }
 
   async function handleRename(id: string) {
@@ -145,6 +144,14 @@ export function ProgramEditor({
       >
         <Plus size={18} className="mr-1.5" /> Додати тренування
       </Button>
+
+      {showCreateSheet && program && (
+        <CreateWorkoutSheet
+          programId={program.id}
+          onClose={() => setShowCreateSheet(false)}
+          onCreated={refresh}
+        />
+      )}
     </section>
   )
 }
