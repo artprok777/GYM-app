@@ -34,7 +34,7 @@ export async function updateExercise(
 }
 
 export async function reorderExercises(
-  workoutTypeId: string,
+  _workoutTypeId: string,
   orderedIds: string[],
 ): Promise<void> {
   await db.transaction("rw", db.exercises, async () => {
