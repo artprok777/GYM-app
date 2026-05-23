@@ -1,7 +1,22 @@
+import { useState } from "react"
+import { ProgramEditor } from "./ProgramEditor"
+import { ExerciseEditor } from "./ExerciseEditor"
+
 export default function ProgramScreen() {
+  const [selectedWorkoutType, setSelectedWorkoutType] = useState<string | null>(null)
+
+  if (selectedWorkoutType) {
+    return (
+      <ExerciseEditor
+        workoutTypeId={selectedWorkoutType}
+        onBack={() => setSelectedWorkoutType(null)}
+      />
+    )
+  }
+
   return (
-    <div className="p-6">
-      <h1 className="font-display text-3xl">Програма</h1>
+    <div className="p-6 pb-24">
+      <ProgramEditor onSelectWorkoutType={setSelectedWorkoutType} />
     </div>
   )
 }
