@@ -8,10 +8,15 @@ export default function App() {
   const [tab, setTab] = useState<Tab>("today")
 
   return (
-    <div className="min-h-screen bg-bg text-text-primary pb-16">
-      {tab === "today" && <TodayScreen />}
-      {tab === "program" && <ProgramScreen />}
-      {tab === "progress" && <ProgressScreen />}
+    <div className="min-h-screen bg-bg text-text-primary">
+      <main
+        className="pb-[calc(env(safe-area-inset-bottom)+5rem)]"
+        style={{ paddingTop: "env(safe-area-inset-top)" }}
+      >
+        {tab === "today" && <TodayScreen />}
+        {tab === "program" && <ProgramScreen />}
+        {tab === "progress" && <ProgressScreen />}
+      </main>
       <TabBar active={tab} onChange={setTab} />
     </div>
   )

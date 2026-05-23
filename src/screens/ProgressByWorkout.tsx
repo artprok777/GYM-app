@@ -5,7 +5,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu"
-import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { ChevronDown, ArrowUp, ArrowRight, ArrowDown } from "lucide-react"
 import { listPrograms, listWorkoutTypes } from "@/db/programs"
@@ -75,14 +74,9 @@ export function ProgressByWorkout() {
   return (
     <div className="space-y-4">
       <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="outline"
-            className="bg-surface border-border h-10 text-text-primary"
-          >
-            {selectedName ?? "Тренування"}{" "}
-            <ChevronDown size={14} className="ml-2" />
-          </Button>
+        <DropdownMenuTrigger className="flex items-center gap-2 bg-surface border border-border h-10 px-3 rounded-md text-text-primary text-sm data-[state=open]:border-accent focus:outline-none">
+          <span>{selectedName ?? "Тренування"}</span>
+          <ChevronDown size={14} />
         </DropdownMenuTrigger>
         <DropdownMenuContent className="bg-surface border-border">
           {types.map((t) => (

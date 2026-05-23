@@ -13,7 +13,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu"
-import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ChevronDown } from "lucide-react"
 import { db } from "@/db/client"
@@ -78,14 +77,9 @@ export function ProgressByExercise() {
     <div className="space-y-4">
       <div className="flex gap-2 flex-wrap">
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="outline"
-              className="bg-surface border-border h-10 text-text-primary"
-            >
-              {selected ?? "Вправа"}{" "}
-              <ChevronDown size={14} className="ml-2" />
-            </Button>
+          <DropdownMenuTrigger className="flex items-center gap-2 bg-surface border border-border h-10 px-3 rounded-md text-text-primary text-sm data-[state=open]:border-accent focus:outline-none">
+            <span>{selected ?? "Вправа"}</span>
+            <ChevronDown size={14} />
           </DropdownMenuTrigger>
           <DropdownMenuContent className="bg-surface border-border max-h-72 overflow-y-auto">
             {exercises.map((e) => (
@@ -101,13 +95,9 @@ export function ProgressByExercise() {
         </DropdownMenu>
 
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="outline"
-              className="bg-surface border-border h-10 text-text-primary"
-            >
-              {range.label} <ChevronDown size={14} className="ml-2" />
-            </Button>
+          <DropdownMenuTrigger className="flex items-center gap-2 bg-surface border border-border h-10 px-3 rounded-md text-text-primary text-sm data-[state=open]:border-accent focus:outline-none">
+            <span>{range.label}</span>
+            <ChevronDown size={14} />
           </DropdownMenuTrigger>
           <DropdownMenuContent className="bg-surface border-border">
             {RANGES.map((r) => (

@@ -6,7 +6,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu"
-import { Button } from "@/components/ui/button"
 import { ChevronDown } from "lucide-react"
 import { getSchedule, setScheduleEntry } from "@/db/schedule"
 import { listPrograms, listWorkoutTypes } from "@/db/programs"
@@ -59,14 +58,11 @@ export function ScheduleEditor() {
           >
             <span className="font-display text-text-primary">{ukDayName(entry.dayOfWeek)}</span>
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className="text-text-primary h-10 px-3 hover:bg-bg"
-                >
-                  {typeName(entry.workoutTypeId)}
-                  <ChevronDown size={16} className="ml-2" />
-                </Button>
+              <DropdownMenuTrigger
+                className="flex items-center gap-2 h-10 px-3 rounded-md bg-bg text-text-primary text-sm border border-border data-[state=open]:border-accent focus:outline-none"
+              >
+                {typeName(entry.workoutTypeId)}
+                <ChevronDown size={16} />
               </DropdownMenuTrigger>
               <DropdownMenuContent className="bg-surface border-border">
                 <DropdownMenuItem

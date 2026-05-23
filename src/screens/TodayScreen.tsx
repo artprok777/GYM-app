@@ -6,7 +6,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu"
-import { Button } from "@/components/ui/button"
 import { ExerciseCard } from "@/components/ExerciseCard"
 import { SetLoggerSheet } from "@/components/SetLoggerSheet"
 import { listExercises } from "@/db/exercises"
@@ -101,14 +100,9 @@ export default function TodayScreen() {
             {ukDayName(today)}
           </p>
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                className="font-display text-3xl p-0 h-auto hover:bg-transparent text-text-primary"
-              >
-                {selectedType?.name ?? "Обери тренування"}
-                <ChevronDown size={24} className="ml-2 text-accent" />
-              </Button>
+            <DropdownMenuTrigger className="flex items-center gap-2 font-display text-3xl text-text-primary focus:outline-none">
+              {selectedType?.name ?? "Обери тренування"}
+              <ChevronDown size={24} className="text-accent" />
             </DropdownMenuTrigger>
             <DropdownMenuContent className="bg-surface border-border">
               {allTypes.map((t) => (
