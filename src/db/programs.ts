@@ -1,7 +1,6 @@
 import { db } from "./client"
 import type { Program, WorkoutType } from "./schema"
-
-const uid = () => crypto.randomUUID()
+import { uid } from "@/lib/id"
 
 export async function createProgram(name: string): Promise<Program> {
   const program: Program = { id: uid(), name, createdAt: Date.now() }

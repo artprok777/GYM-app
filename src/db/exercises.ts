@@ -1,7 +1,6 @@
 import { db } from "./client"
 import type { ExerciseTemplate } from "./schema"
-
-const uid = () => crypto.randomUUID()
+import { uid } from "@/lib/id"
 
 export async function listExercises(workoutTypeId: string): Promise<ExerciseTemplate[]> {
   return db.exercises

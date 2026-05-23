@@ -1,5 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -26,7 +26,7 @@
     --border: 240 8% 18%;
     --input: 240 8% 18%;
     --ring: 36 91% 55%;
-    --radius: 0.75rem;
+    --radius: 0.625rem;
   }
   .dark {
     --background: 240 6% 6%;
@@ -57,8 +57,18 @@ html, body, #root {
   color: #F8F8F8;
   font-family: 'Geist', system-ui, sans-serif;
   -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   margin: 0;
   padding: 0;
+  overscroll-behavior: none;
+}
+
+body {
+  background-image:
+    radial-gradient(at 80% -10%, rgba(245, 166, 35, 0.06) 0px, transparent 50%),
+    radial-gradient(at 20% 110%, rgba(245, 166, 35, 0.03) 0px, transparent 60%);
+  background-attachment: fixed;
 }
 
 * {
@@ -70,4 +80,26 @@ html, body, #root {
 input, textarea {
   -webkit-user-select: text;
   user-select: text;
+}
+
+/* Tabular figures everywhere so numeric columns align */
+.font-display,
+input[type="number"] {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum", "zero";
+}
+
+::selection {
+  background: rgba(245, 166, 35, 0.3);
+  color: #F8F8F8;
+}
+
+/* Hide number input spinners on iOS/Chrome */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
 }

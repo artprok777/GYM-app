@@ -1,7 +1,6 @@
 import { db } from "./client"
 import type { WorkoutSession, LoggedSet } from "./schema"
-
-const uid = () => crypto.randomUUID()
+import { uid } from "@/lib/id"
 
 function startOfDay(ts = Date.now()): number {
   const d = new Date(ts)

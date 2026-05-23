@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { ChevronDown } from "lucide-react"
+import { ChevronDown, Dumbbell } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -80,31 +80,43 @@ export default function TodayScreen() {
 
   const today = new Date().getDay()
   const selectedType = allTypes.find((t) => t.id === selectedTypeId)
+  const completed = items.filter((i) => i.loggedThisSession >= i.exercise.targetSets).length
 
   if (allTypes.length === 0) {
     return (
-      <div className="p-6">
-        <h1 className="font-display text-3xl">Сьогодні</h1>
-        <p className="text-text-secondary mt-4 text-sm">
-          Створи програму на вкладці «Програма», щоб почати.
-        </p>
+      <div className="px-5 py-6 space-y-6">
+        <h1 className="font-display text-[34px] leading-none font-medium">
+          Сьогодні
+        </h1>
+        <EmptyState
+          title="Програма ще не створена"
+          body="Перейди у «Програма», створи свої тренування (наприклад A, B, C) і додай у них вправи."
+        />
       </div>
     )
   }
 
   return (
     <>
-      <div className="p-6 pb-24 space-y-4">
-        <div>
-          <p className="text-text-secondary text-sm uppercase tracking-wider">
+      <div className="px-5 py-6 pb-12 space-y-6">
+        <div className="space-y-3">
+          <p className="font-display text-[11px] uppercase tracking-[0.2em] text-text-secondary">
             {ukDayName(today)}
           </p>
           <DropdownMenu>
-            <DropdownMenuTrigger className="flex items-center gap-2 font-display text-3xl text-text-primary focus:outline-none">
-              {selectedType?.name ?? "Обери тренування"}
-              <ChevronDown size={24} className="text-accent" />
+            <DropdownMenuTrigger className="group flex items-center gap-2 focus:outline-none">
+              <h1 className="font-display text-[34px] leading-none font-medium tracking-tight text-text-primary">
+                {selectedType?.name ?? "Обери тренування"}
+              </h1>
+              <ChevronDown
+                size={22}
+                className="text-accent group-data-[state=open]:rotate-180 transition-transform"
+              />
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="bg-surface border-border">
+            <DropdownMenuContent
+              align="start"
+              className="bg-surface border-border min-w-[180px]"
+            >
               {allTypes.map((t) => (
                 <DropdownMenuItem
                   key={t.id}
@@ -116,9 +128,20 @@ export default function TodayScreen() {
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
+
+          {items.length > 0 && (
+            <div className="flex items-center gap-1.5 text-text-secondary text-[12px]">
+              <span className="font-display text-text-primary">
+                {completed}
+              </span>
+              <span>з</span>
+              <span className="font-display text-text-primary">{items.length}</span>
+              <span>вправ виконано</span>
+            </div>
+          )}
         </div>
 
-        <div className="space-y-2 pt-2">
+        <div className="space-y-2">
           {items.map((item) => (
             <ExerciseCard
               key={item.exercise.id}
@@ -129,9 +152,10 @@ export default function TodayScreen() {
             />
           ))}
           {items.length === 0 && (
-            <p className="text-text-secondary text-sm py-8 text-center">
-              У цьому тренуванні поки немає вправ. Додай їх у «Програма».
-            </p>
+            <EmptyState
+              title="У цьому тренуванні немає вправ"
+              body="Додай вправи у вкладці «Програма»."
+            />
           )}
         </div>
       </div>
@@ -147,5 +171,17 @@ export default function TodayScreen() {
         />
       )}
     </>
+  )
+}
+
+function EmptyState({ title, body }: { title: string; body: string }) {
+  return (
+    <div className="rounded-xl border border-dashed border-border p-6 text-center space-y-2">
+      <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-accent-muted text-accent mb-1">
+        <Dumbbell size={18} />
+      </div>
+      <p className="font-display text-text-primary text-base">{title}</p>
+      <p className="text-text-secondary text-sm leading-relaxed">{body}</p>
+    </div>
   )
 }
