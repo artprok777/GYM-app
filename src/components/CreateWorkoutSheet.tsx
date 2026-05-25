@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion, AnimatePresence, useDragControls } from "framer-motion"
 import { X, Plus, Trash2 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { addWorkoutType } from "@/db/programs"
@@ -27,6 +27,7 @@ export function CreateWorkoutSheet({
   const [exSets, setExSets] = useState("3")
   const [exWeight, setExWeight] = useState("")
   const [saving, setSaving] = useState(false)
+  const dragControls = useDragControls()
 
   function addDraftExercise() {
     const name = exName.trim()
@@ -72,19 +73,33 @@ export function CreateWorkoutSheet({
       />
       <motion.div
         key="sheet"
-        className="fixed bottom-0 left-0 right-0 bg-surface rounded-t-2xl z-50 border-t border-border"
-        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+        className="fixed bottom-0 left-0 right-0 bg-surface rounded-t-2xl z-50 border-t border-border flex flex-col"
+        style={{
+          paddingBottom: "env(safe-area-inset-bottom)",
+          maxHeight: "calc(100dvh - env(safe-area-inset-top) - 8px)",
+        }}
         initial={{ y: "100%" }}
         animate={{ y: 0 }}
         exit={{ y: "100%" }}
         transition={{ type: "spring", damping: 32, stiffness: 380 }}
+        drag="y"
+        dragControls={dragControls}
+        dragListener={false}
+        dragConstraints={{ top: 0 }}
+        dragElastic={{ top: 0, bottom: 0.4 }}
+        onDragEnd={(_, info) => {
+          if (info.offset.y > 80 || info.velocity.y > 500) onClose()
+        }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex justify-center pt-3 pb-1">
+        <div
+          className="flex justify-center pt-3 pb-1 cursor-grab active:cursor-grabbing touch-none shrink-0"
+          onPointerDown={(e) => dragControls.start(e)}
+        >
           <div className="w-10 h-1 rounded-full bg-border" />
         </div>
 
-        <div className="px-5 pb-5 space-y-5 max-h-[85vh] overflow-y-auto">
+        <div className="px-5 pb-5 space-y-5 overflow-y-auto flex-1">
           {/* Header */}
           <div className="flex items-start justify-between gap-3">
             <div className="space-y-1">
