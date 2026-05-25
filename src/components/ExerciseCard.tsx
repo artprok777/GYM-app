@@ -21,44 +21,35 @@ export function ExerciseCard({
     <button
       onClick={onClick}
       className={cn(
-        "group w-full text-left rounded-xl border bg-surface px-4 py-4",
+        "group w-full text-left rounded-xl border px-4 py-4",
         "transition-all active:scale-[0.985]",
         isComplete
-          ? "border-success/25"
+          ? "bg-success/[0.05] border-success/25"
           : hasProgress
-            ? "border-accent/30"
-            : "border-border",
+            ? "bg-accent/[0.06] border-accent/25"
+            : "bg-surface border-border",
       )}
     >
-      <div className="flex items-center gap-3">
-        <div
-          className={cn(
-            "w-1 self-stretch rounded-full",
-            isComplete
-              ? "bg-success"
-              : hasProgress
-                ? "bg-accent"
-                : "bg-border",
-          )}
-        />
-        <div className="flex-1 min-w-0">
-          <div className="font-sans font-medium text-text-primary text-[17px] leading-tight">
+      <div className="flex items-center gap-4">
+        <div className="flex-1 min-w-0 space-y-1.5">
+          <div className="font-display font-medium text-text-primary text-[18px] leading-tight tracking-tight truncate">
             {exercise.name}
           </div>
-          <div className="flex items-center gap-1.5 mt-1.5">
-            <span className="font-display text-[10px] uppercase tracking-wider text-text-secondary">
-              Останній раз
+          <div className="flex items-center gap-1.5">
+            <span className="font-display text-[10px] uppercase tracking-[0.15em] text-text-secondary">
+              Минулого
             </span>
             <span className="font-display text-[13px] text-text-primary">
               {formatLastSession(lastSets)}
             </span>
           </div>
         </div>
-        <div className="text-right shrink-0 flex items-center gap-2">
-          <div>
+
+        <div className="shrink-0 flex items-center gap-2.5">
+          <div className="text-right leading-none">
             <div
               className={cn(
-                "font-display text-xl leading-none",
+                "font-display text-[30px] leading-none tabular-nums",
                 isComplete
                   ? "text-success"
                   : hasProgress
@@ -67,17 +58,14 @@ export function ExerciseCard({
               )}
             >
               {loggedThisSession}
-              <span className="text-text-secondary text-base">
-                /{exercise.targetSets}
-              </span>
             </div>
-            <div className="font-display text-[9px] uppercase tracking-wider text-text-secondary mt-1">
-              підх
+            <div className="font-display text-[11px] text-text-secondary mt-1">
+              / {exercise.targetSets} підх
             </div>
           </div>
           <ChevronRight
-            size={18}
-            className="text-text-secondary group-active:translate-x-0.5 transition-transform"
+            size={16}
+            className="text-text-secondary/40 group-active:translate-x-0.5 transition-transform"
           />
         </div>
       </div>

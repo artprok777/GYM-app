@@ -7,7 +7,6 @@ import {
   ResponsiveContainer,
   Tooltip,
 } from "recharts"
-import { Card } from "@/components/ui/card"
 import { getSessionsByWeek, type WeekStat } from "@/db/progress"
 import { db } from "@/db/client"
 
@@ -43,16 +42,30 @@ export function ProgressOverall() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-3">
-        <StatCard label="Всього тренувань" value={String(totalSessions)} />
-        <StatCard label="Серія тижнів" value={String(streak)} />
+    <div className="space-y-6">
+      <div className="flex gap-8">
+        <div>
+          <p className="font-display text-[10px] uppercase tracking-[0.2em] text-text-secondary">
+            Всього тренувань
+          </p>
+          <p className="font-display text-[48px] leading-none tabular-nums text-text-primary mt-1">
+            {totalSessions}
+          </p>
+        </div>
+        <div>
+          <p className="font-display text-[10px] uppercase tracking-[0.2em] text-text-secondary">
+            Серія тижнів
+          </p>
+          <p className={`font-display text-[48px] leading-none tabular-nums mt-1 ${streak > 0 ? "text-accent" : "text-text-primary"}`}>
+            {streak}
+          </p>
+        </div>
       </div>
 
       <div>
-        <h3 className="text-text-secondary text-xs uppercase tracking-wider mb-2">
+        <p className="font-display text-[10px] uppercase tracking-[0.2em] text-text-secondary mb-3">
           Тренувань на тиждень
-        </h3>
+        </p>
         <div className="h-56 bg-surface rounded-lg p-3 border border-border">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData}>
@@ -82,17 +95,6 @@ export function ProgressOverall() {
         </div>
       </div>
     </div>
-  )
-}
-
-function StatCard({ label, value }: { label: string; value: string }) {
-  return (
-    <Card className="bg-surface border-border p-4">
-      <div className="text-text-secondary text-xs uppercase tracking-wider">
-        {label}
-      </div>
-      <div className="font-display text-3xl mt-1 text-text-primary">{value}</div>
-    </Card>
   )
 }
 

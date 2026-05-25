@@ -80,7 +80,6 @@ export default function TodayScreen() {
 
   const today = new Date().getDay()
   const selectedType = allTypes.find((t) => t.id === selectedTypeId)
-  const completed = items.filter((i) => i.loggedThisSession >= i.exercise.targetSets).length
 
   if (allTypes.length === 0) {
     return (
@@ -130,13 +129,23 @@ export default function TodayScreen() {
           </DropdownMenu>
 
           {items.length > 0 && (
-            <div className="flex items-center gap-1.5 text-text-secondary text-[12px]">
-              <span className="font-display text-text-primary">
-                {completed}
-              </span>
-              <span>з</span>
-              <span className="font-display text-text-primary">{items.length}</span>
-              <span>вправ виконано</span>
+            <div className="flex items-center gap-1.5">
+              {items.map((item) => {
+                const done = item.loggedThisSession >= item.exercise.targetSets
+                const inProgress = item.loggedThisSession > 0 && !done
+                return (
+                  <div
+                    key={item.exercise.id}
+                    className={`h-[3px] flex-1 rounded-full transition-colors duration-300 ${
+                      done
+                        ? "bg-success"
+                        : inProgress
+                          ? "bg-accent"
+                          : "bg-border"
+                    }`}
+                  />
+                )
+              })}
             </div>
           )}
         </div>
