@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useState, useEffect } from "react"
 import { motion, AnimatePresence, useDragControls } from "framer-motion"
 import { X, Check, Plus, Minus } from "lucide-react"
 import {
@@ -11,6 +11,7 @@ import type { ExerciseTemplate, LoggedSet } from "@/db/schema"
 import { formatWeight, formatLastSession } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { WheelPicker } from "./WheelPicker"
+import { useBodyScrollLock } from "@/hooks/useBodyScrollLock"
 
 const WEIGHT_VALUES = Array.from({ length: 401 }, (_, i) => Math.round(i * 5) / 10)
 
@@ -85,11 +86,7 @@ export function SetLoggerSheet({
 
   const progressCount = loggedSets.length
   const dragControls = useDragControls()
-
-  useEffect(() => {
-    document.body.style.overflow = "hidden"
-    return () => { document.body.style.overflow = "" }
-  }, [])
+  useBodyScrollLock()
 
   return (
     <AnimatePresence>

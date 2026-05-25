@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { motion, AnimatePresence, useDragControls } from "framer-motion"
 import { X, Plus, Trash2 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { addWorkoutType } from "@/db/programs"
 import { addExercise } from "@/db/exercises"
 import { cn } from "@/lib/utils"
+import { useBodyScrollLock } from "@/hooks/useBodyScrollLock"
 
 interface DraftExercise {
   name: string
@@ -28,11 +29,7 @@ export function CreateWorkoutSheet({
   const [exWeight, setExWeight] = useState("")
   const [saving, setSaving] = useState(false)
   const dragControls = useDragControls()
-
-  useEffect(() => {
-    document.body.style.overflow = "hidden"
-    return () => { document.body.style.overflow = "" }
-  }, [])
+  useBodyScrollLock()
 
   function addDraftExercise() {
     const name = exName.trim()
