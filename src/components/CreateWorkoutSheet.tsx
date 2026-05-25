@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion, AnimatePresence, useDragControls } from "framer-motion"
 import { X, Plus, Trash2 } from "lucide-react"
 import { Input } from "@/components/ui/input"
@@ -28,6 +28,11 @@ export function CreateWorkoutSheet({
   const [exWeight, setExWeight] = useState("")
   const [saving, setSaving] = useState(false)
   const dragControls = useDragControls()
+
+  useEffect(() => {
+    document.body.style.overflow = "hidden"
+    return () => { document.body.style.overflow = "" }
+  }, [])
 
   function addDraftExercise() {
     const name = exName.trim()
@@ -74,10 +79,7 @@ export function CreateWorkoutSheet({
       <motion.div
         key="sheet"
         className="fixed bottom-0 left-0 right-0 bg-surface rounded-t-2xl z-50 border-t border-border flex flex-col"
-        style={{
-          paddingBottom: "env(safe-area-inset-bottom)",
-          maxHeight: "calc(100dvh - env(safe-area-inset-top) - 8px)",
-        }}
+        style={{ maxHeight: "calc(100dvh - env(safe-area-inset-top) - 8px)" }}
         initial={{ y: "100%" }}
         animate={{ y: 0 }}
         exit={{ y: "100%" }}
@@ -99,7 +101,7 @@ export function CreateWorkoutSheet({
           <div className="w-10 h-1 rounded-full bg-border" />
         </div>
 
-        <div className="px-5 pb-5 space-y-5 overflow-y-auto flex-1">
+        <div className="px-5 space-y-5 overflow-y-auto flex-1" style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 20px)" }}>
           {/* Header */}
           <div className="flex items-start justify-between gap-3">
             <div className="space-y-1">

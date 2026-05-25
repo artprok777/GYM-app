@@ -86,6 +86,11 @@ export function SetLoggerSheet({
   const progressCount = loggedSets.length
   const dragControls = useDragControls()
 
+  useEffect(() => {
+    document.body.style.overflow = "hidden"
+    return () => { document.body.style.overflow = "" }
+  }, [])
+
   return (
     <AnimatePresence>
       <motion.div
@@ -99,10 +104,7 @@ export function SetLoggerSheet({
       <motion.div
         key="sheet"
         className="fixed bottom-0 left-0 right-0 bg-surface rounded-t-2xl z-50 border-t border-border flex flex-col"
-        style={{
-          paddingBottom: "env(safe-area-inset-bottom)",
-          maxHeight: "calc(100dvh - env(safe-area-inset-top) - 8px)",
-        }}
+        style={{ maxHeight: "calc(100dvh - env(safe-area-inset-top) - 8px)" }}
         initial={{ y: "100%" }}
         animate={{ y: 0 }}
         exit={{ y: "100%" }}
@@ -123,7 +125,7 @@ export function SetLoggerSheet({
           <div className="w-10 h-1 rounded-full bg-border" />
         </div>
 
-        <div className="px-5 pb-5 space-y-5 overflow-y-auto flex-1">
+        <div className="px-5 space-y-5 overflow-y-auto flex-1" style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 20px)" }}>
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 space-y-1.5">
               <p className="font-display text-[10px] uppercase tracking-[0.2em] text-accent">
