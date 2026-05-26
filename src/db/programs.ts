@@ -37,6 +37,17 @@ export async function renameWorkoutType(id: string, name: string): Promise<void>
   await db.workoutTypes.update(id, { name })
 }
 
+export async function reorderWorkoutTypes(
+  _programId: string,
+  orderedIds: string[],
+): Promise<void> {
+  await db.transaction("rw", db.workoutTypes, async () => {
+    for (let i = 0; i < orderedIds.length; i++) {
+      await db.workoutTypes.update(orderedIds[i], { order: i })
+    }
+  })
+}
+
 export async function deleteWorkoutType(id: string): Promise<void> {
   await db.transaction("rw", db.workoutTypes, db.exercises, async () => {
     await db.exercises.where("workoutTypeId").equals(id).delete()
