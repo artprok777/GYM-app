@@ -14,10 +14,12 @@ export async function getExerciseHistory(
   fromDate?: number,
   toDate?: number,
 ): Promise<ExerciseHistoryPoint[]> {
-  const allSets = await db.loggedSets
-    .where("exerciseName").equals(exerciseName)
-    .toArray()
-  const sessions = await db.sessions.toArray()
+  const allSets = (
+    await db.loggedSets.where("exerciseName").equals(exerciseName).toArray()
+  ).filter((s) => s.deletedAt == null)
+  const sessions = (await db.sessions.toArray()).filter(
+    (s) => s.deletedAt == null,
+  )
   const sessionById = new Map(sessions.map((s) => [s.id, s]))
 
   const grouped = new Map<string, LoggedSet[]>()
@@ -47,9 +49,9 @@ export async function getExerciseHistory(
 export async function getPersonalRecord(
   exerciseName: string,
 ): Promise<number | null> {
-  const sets = await db.loggedSets
-    .where("exerciseName").equals(exerciseName)
-    .toArray()
+  const sets = (
+    await db.loggedSets.where("exerciseName").equals(exerciseName).toArray()
+  ).filter((s) => s.deletedAt == null)
   if (sets.length === 0) return null
   return Math.max(...sets.map((s) => s.weight))
 }
@@ -66,9 +68,9 @@ export async function getWorkoutProgress(
   workoutTypeId: string,
   exerciseNames: string[],
 ): Promise<WorkoutExerciseProgress[]> {
-  const sessions = await db.sessions
-    .where("workoutTypeId").equals(workoutTypeId)
-    .sortBy("date")
+  const sessions = (
+    await db.sessions.where("workoutTypeId").equals(workoutTypeId).sortBy("date")
+  ).filter((s) => s.deletedAt == null)
   const sessionIds = new Set(sessions.map((s) => s.id))
   const sessionDateById = new Map(sessions.map((s) => [s.id, s.date]))
 
@@ -76,7 +78,7 @@ export async function getWorkoutProgress(
   for (const name of exerciseNames) {
     const sets = (
       await db.loggedSets.where("exerciseName").equals(name).toArray()
-    ).filter((s) => sessionIds.has(s.sessionId))
+    ).filter((s) => sessionIds.has(s.sessionId) && s.deletedAt == null)
 
     if (sets.length === 0) continue
 
@@ -112,7 +114,9 @@ function mondayOf(ts: number): number {
 }
 
 export async function getSessionsByWeek(): Promise<WeekStat[]> {
-  const sessions = await db.sessions.toArray()
+  const sessions = (await db.sessions.toArray()).filter(
+    (s) => s.deletedAt == null,
+  )
   const counts = new Map<number, number>()
   for (const s of sessions) {
     const week = mondayOf(s.date)
@@ -126,8 +130,8 @@ export async function getSessionsByWeek(): Promise<WeekStat[]> {
 export async function getSessionDatesForWorkoutType(
   workoutTypeId: string,
 ): Promise<number[]> {
-  const sessions = await db.sessions
-    .where("workoutTypeId").equals(workoutTypeId)
-    .toArray()
+  const sessions = (
+    await db.sessions.where("workoutTypeId").equals(workoutTypeId).toArray()
+  ).filter((s) => s.deletedAt == null)
   return sessions.map((s) => s.date).sort((a, b) => a - b)
 }
