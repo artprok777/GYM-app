@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence, useDragControls } from "framer-motion"
-import { X, Check, Plus, Minus } from "lucide-react"
+import { X, Check, Plus, Minus, Pencil } from "lucide-react"
 import {
   getSessionSetsForExercise,
   getLastSetsForExercise,
@@ -38,6 +38,11 @@ export function SetLoggerSheet({
   const [editingSetId, setEditingSetId] = useState<string | null>(null)
   const [editWeight, setEditWeight] = useState("")
   const [editReps, setEditReps] = useState("")
+  const [sessionTargetReps, setSessionTargetReps] = useState<number | null>(
+    exercise.targetReps ?? null,
+  )
+  const [editingTargetReps, setEditingTargetReps] = useState(false)
+  const [draftTargetReps, setDraftTargetReps] = useState("")
 
   async function refresh() {
     const last = await getLastSetsForExercise(exercise.name, sessionId)
@@ -52,10 +57,25 @@ export function SetLoggerSheet({
         setReps(String(seed.reps))
       } else {
         if (exercise.targetWeight) setWeight(snapWeight(exercise.targetWeight))
-        if (exercise.targetReps) setReps(String(exercise.targetReps))
+        if (sessionTargetReps != null) setReps(String(sessionTargetReps))
       }
       setSeeded(true)
     }
+  }
+
+  function commitTargetReps() {
+    const raw = draftTargetReps.trim()
+    if (raw === "") {
+      setSessionTargetReps(null)
+    } else {
+      const n = parseInt(raw, 10)
+      if (!isNaN(n) && n > 0) {
+        setSessionTargetReps(n)
+        if (!loggedSets.length) setReps(String(n))
+      }
+    }
+    setEditingTargetReps(false)
+    setDraftTargetReps("")
   }
 
   useEffect(() => {
@@ -151,9 +171,60 @@ export function SetLoggerSheet({
         <div className="px-5 space-y-5 overflow-y-auto flex-1" style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 20px)" }}>
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 space-y-1.5">
-              <h2 className="font-display text-[22px] leading-tight text-text-primary tracking-tight">
-                {exercise.name}
-              </h2>
+              <p className="font-display text-[10px] uppercase tracking-[0.2em] text-accent">
+                Підхід {loggedSets.length + 1}
+                <span className="text-text-secondary">
+                  {" "}/ {exercise.targetSets}
+                </span>
+              </p>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="font-display text-[22px] leading-tight text-text-primary tracking-tight">
+                  {exercise.name}
+                </h2>
+                {editingTargetReps ? (
+                  <div className="flex items-center gap-1">
+                    <input
+                      autoFocus
+                      type="number"
+                      inputMode="numeric"
+                      step="1"
+                      value={draftTargetReps}
+                      onChange={(e) => setDraftTargetReps(e.target.value)}
+                      onBlur={commitTargetReps}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") commitTargetReps()
+                        if (e.key === "Escape") {
+                          setEditingTargetReps(false)
+                          setDraftTargetReps("")
+                        }
+                      }}
+                      className="w-14 h-7 bg-bg border border-border rounded-md text-center font-display text-text-primary text-[13px]"
+                    />
+                    <span className="font-display text-[11px] uppercase tracking-wider text-text-secondary">
+                      повт
+                    </span>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setEditingTargetReps(true)
+                      setDraftTargetReps(
+                        sessionTargetReps != null ? String(sessionTargetReps) : "",
+                      )
+                    }}
+                    className="inline-flex items-center gap-1 px-2 h-7 rounded-md border border-border bg-bg text-text-secondary hover:text-text-primary"
+                    aria-label="Змінити цільові повтори"
+                  >
+                    <span className="font-display text-[12px] text-text-primary">
+                      {sessionTargetReps != null ? sessionTargetReps : "—"}
+                    </span>
+                    <span className="font-display text-[10px] uppercase tracking-wider">
+                      повт
+                    </span>
+                    <Pencil size={11} className="ml-0.5" />
+                  </button>
+                )}
+              </div>
               <p className="text-text-secondary text-[12px] font-sans">
                 Минулого разу:{" "}
                 <span className="font-display text-text-primary">
