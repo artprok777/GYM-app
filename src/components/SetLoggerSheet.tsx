@@ -32,8 +32,8 @@ export function SetLoggerSheet({
   const [lastSets, setLastSets] = useState<LoggedSet[]>([])
   const [loggedSets, setLoggedSets] = useState<LoggedSet[]>([])
   const [weight, setWeight] = useState(0)
-  const [reps, setReps] = useState("")
-  const [flashId, setFlashId] = useState<string | null>(null)
+  const [setsCount, setSetsCount] = useState(1)
+  const [flashIds, setFlashIds] = useState<Set<string>>(new Set())
   const [seeded, setSeeded] = useState(false)
   const [editingSetId, setEditingSetId] = useState<string | null>(null)
   const [editWeight, setEditWeight] = useState("")
@@ -54,10 +54,8 @@ export function SetLoggerSheet({
       const seed = logged[logged.length - 1] ?? last[last.length - 1]
       if (seed) {
         setWeight(snapWeight(seed.weight))
-        setReps(String(seed.reps))
-      } else {
-        if (exercise.targetWeight) setWeight(snapWeight(exercise.targetWeight))
-        if (sessionTargetReps != null) setReps(String(sessionTargetReps))
+      } else if (exercise.targetWeight) {
+        setWeight(snapWeight(exercise.targetWeight))
       }
       setSeeded(true)
     }
@@ -69,10 +67,7 @@ export function SetLoggerSheet({
       setSessionTargetReps(null)
     } else {
       const n = parseInt(raw, 10)
-      if (!isNaN(n) && n > 0) {
-        setSessionTargetReps(n)
-        if (!loggedSets.length) setReps(String(n))
-      }
+      if (!isNaN(n) && n > 0) setSessionTargetReps(n)
     }
     setEditingTargetReps(false)
     setDraftTargetReps("")
@@ -82,25 +77,29 @@ export function SetLoggerSheet({
     refresh()
   }, [])
 
-  function bumpReps(delta: number) {
-    const current = parseInt(reps, 10) || 0
-    const next = Math.max(0, current + delta)
-    setReps(String(next))
+  function bumpSets(delta: number) {
+    setSetsCount((c) => Math.max(1, c + delta))
   }
 
   async function handleAdd() {
     const w = weight
-    const r = parseInt(reps, 10)
-    if (!w || !r) return
-    const set = await logSet(
-      sessionId,
-      exercise.name,
-      w,
-      r,
-      loggedSets.length + 1,
-    )
-    setFlashId(set.id)
-    setTimeout(() => setFlashId(null), 500)
+    const r = sessionTargetReps ?? exercise.targetReps ?? 1
+    const n = Math.max(1, setsCount)
+    if (!w) return
+    const newIds: string[] = []
+    for (let i = 0; i < n; i++) {
+      const set = await logSet(
+        sessionId,
+        exercise.name,
+        w,
+        r,
+        loggedSets.length + 1 + i,
+      )
+      newIds.push(set.id)
+    }
+    setFlashIds(new Set(newIds))
+    setTimeout(() => setFlashIds(new Set()), 500)
+    setSetsCount(1)
     await refresh()
   }
 
@@ -258,13 +257,16 @@ export function SetLoggerSheet({
                 <div style={{ height: 5 * 44 }} />
               )}
             </div>
-            {/* Reps with +/- */}
+            {/* Sets count with +/- */}
             <NumberField
-              label="ПОВТОРИ"
-              value={reps}
-              onChange={setReps}
-              onIncrement={() => bumpReps(1)}
-              onDecrement={() => bumpReps(-1)}
+              label="ПІДХОДИ"
+              value={String(setsCount)}
+              onChange={(v) => {
+                const n = parseInt(v, 10)
+                setSetsCount(isNaN(n) || n < 1 ? 1 : n)
+              }}
+              onIncrement={() => bumpSets(1)}
+              onDecrement={() => bumpSets(-1)}
               inputMode="numeric"
               step="1"
             />
@@ -275,7 +277,9 @@ export function SetLoggerSheet({
             className="w-full bg-accent text-bg hover:bg-accent/90 active:scale-[0.98] transition-transform h-14 rounded-xl font-medium text-[15px] flex items-center justify-center gap-2"
           >
             <Plus size={20} strokeWidth={2.5} />
-            Зафіксувати підхід
+            {setsCount > 1
+              ? `Зафіксувати ${setsCount} підходи`
+              : "Зафіксувати підхід"}
           </button>
 
           {loggedSets.length > 0 && (
@@ -291,10 +295,10 @@ export function SetLoggerSheet({
                       key={s.id}
                       className={cn(
                         "px-3 py-2.5",
-                        flashId === s.id && "bg-accent-muted",
+                        flashIds.has(s.id) && "bg-accent-muted",
                       )}
                       animate={
-                        flashId === s.id
+                        flashIds.has(s.id)
                           ? {
                               backgroundColor: [
                                 "rgba(245,166,35,0.28)",
