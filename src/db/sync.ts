@@ -226,7 +226,11 @@ async function bootstrapInitialUpload(): Promise<void> {
 }
 
 export async function bootstrap(): Promise<void> {
-  if (!cloudEnabled) return
+  console.log("[sync] cloudEnabled =", cloudEnabled, "USER_ID =", USER_ID || "(empty)")
+  if (!cloudEnabled) {
+    console.warn("[sync] cloud disabled — VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY / VITE_USER_ID env vars missing")
+    return
+  }
   await bootstrapInitialUpload()
   await pullChanges()
   await pushQueue()
