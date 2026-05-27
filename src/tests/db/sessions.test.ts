@@ -7,6 +7,7 @@ import {
   getSessionSets,
   getSessionSetsForExercise,
   getLastSetsForExercise,
+  updateSet,
   deleteSet,
 } from "@/db/sessions"
 
@@ -69,5 +70,15 @@ describe("sessions db", () => {
     const set = await logSet(s.id, "Squat", 80, 5, 1)
     await deleteSet(set.id)
     expect(await getSessionSets(s.id)).toHaveLength(0)
+  })
+
+  it("updates weight and reps of a logged set", async () => {
+    const s = await startSession("wt-1")
+    const set = await logSet(s.id, "Squat", 80, 5, 1)
+    await updateSet(set.id, { weight: 82.5, reps: 8 })
+    const sets = await getSessionSets(s.id)
+    expect(sets[0].weight).toBe(82.5)
+    expect(sets[0].reps).toBe(8)
+    expect(sets[0].setNumber).toBe(1)
   })
 })

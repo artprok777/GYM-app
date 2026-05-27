@@ -6,6 +6,7 @@ import {
   getLastSetsForExercise,
   logSet,
   deleteSet,
+  updateSet,
 } from "@/db/sessions"
 import type { ExerciseTemplate, LoggedSet } from "@/db/schema"
 import { formatWeight, formatLastSession } from "@/lib/format"
@@ -34,6 +35,9 @@ export function SetLoggerSheet({
   const [reps, setReps] = useState("")
   const [flashId, setFlashId] = useState<string | null>(null)
   const [seeded, setSeeded] = useState(false)
+  const [editingSetId, setEditingSetId] = useState<string | null>(null)
+  const [editWeight, setEditWeight] = useState("")
+  const [editReps, setEditReps] = useState("")
 
   async function refresh() {
     const last = await getLastSetsForExercise(exercise.name, sessionId)
@@ -46,8 +50,9 @@ export function SetLoggerSheet({
       if (seed) {
         setWeight(snapWeight(seed.weight))
         setReps(String(seed.reps))
-      } else if (exercise.targetWeight) {
-        setWeight(snapWeight(exercise.targetWeight))
+      } else {
+        if (exercise.targetWeight) setWeight(snapWeight(exercise.targetWeight))
+        if (exercise.targetReps) setReps(String(exercise.targetReps))
       }
       setSeeded(true)
     }
@@ -84,7 +89,28 @@ export function SetLoggerSheet({
     await refresh()
   }
 
-  const progressCount = loggedSets.length
+  function startEditSet(s: LoggedSet) {
+    setEditingSetId(s.id)
+    setEditWeight(String(s.weight))
+    setEditReps(String(s.reps))
+  }
+
+  function cancelEditSet() {
+    setEditingSetId(null)
+    setEditWeight("")
+    setEditReps("")
+  }
+
+  async function commitEditSet(id: string) {
+    const w = parseFloat(editWeight.replace(",", "."))
+    const r = parseInt(editReps, 10)
+    if (!isNaN(w) && w >= 0 && !isNaN(r) && r > 0) {
+      await updateSet(id, { weight: snapWeight(w), reps: r })
+    }
+    cancelEditSet()
+    await refresh()
+  }
+
   const dragControls = useDragControls()
   useBodyScrollLock()
 
@@ -125,12 +151,6 @@ export function SetLoggerSheet({
         <div className="px-5 space-y-5 overflow-y-auto flex-1" style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 20px)" }}>
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 space-y-1.5">
-              <p className="font-display text-[10px] uppercase tracking-[0.2em] text-accent">
-                Підхід {progressCount + 1}
-                <span className="text-text-secondary">
-                  {" "}/ {exercise.targetSets}
-                </span>
-              </p>
               <h2 className="font-display text-[22px] leading-tight text-text-primary tracking-tight">
                 {exercise.name}
               </h2>
@@ -156,12 +176,16 @@ export function SetLoggerSheet({
               <p className="font-display text-[10px] uppercase tracking-[0.2em] text-text-secondary text-center pt-3 pb-1">
                 КГ
               </p>
-              <WheelPicker
-                values={WEIGHT_VALUES}
-                value={weight}
-                onChange={setWeight}
-                formatValue={(v) => (v === Math.floor(v) ? String(v) : v.toFixed(1))}
-              />
+              {seeded ? (
+                <WheelPicker
+                  values={WEIGHT_VALUES}
+                  value={weight}
+                  onChange={setWeight}
+                  formatValue={(v) => (v === Math.floor(v) ? String(v) : v.toFixed(1))}
+                />
+              ) : (
+                <div style={{ height: 5 * 44 }} />
+              )}
             </div>
             {/* Reps with +/- */}
             <NumberField
@@ -189,43 +213,94 @@ export function SetLoggerSheet({
                 Підходи цієї сесії
               </p>
               <ul className="rounded-xl border border-border bg-bg divide-y divide-border overflow-hidden">
-                {loggedSets.map((s, i) => (
-                  <motion.li
-                    key={s.id}
-                    className={cn(
-                      "flex items-center gap-3 px-4 py-3",
-                      flashId === s.id && "bg-accent-muted",
-                    )}
-                    animate={
-                      flashId === s.id
-                        ? {
-                            backgroundColor: [
-                              "rgba(245,166,35,0.28)",
-                              "rgba(245,166,35,0)",
-                            ],
-                          }
-                        : {}
-                    }
-                    transition={{ duration: 0.5 }}
-                  >
-                    <Check size={14} className="text-success" />
-                    <span className="font-display text-[11px] uppercase tracking-wider text-text-secondary w-16">
-                      Підхід {i + 1}
-                    </span>
-                    <span className="font-display text-text-primary flex-1 text-[15px]">
-                      {formatWeight(s.weight)}
-                      <span className="text-text-secondary text-[12px] mx-1">кг</span>
-                      ×<span className="ml-1">{s.reps}</span>
-                    </span>
-                    <button
-                      onClick={() => handleRemove(s.id)}
-                      className="text-text-secondary hover:text-destructive text-xs px-2 py-1"
-                      aria-label="Видалити підхід"
+                {loggedSets.map((s, i) => {
+                  const isEditing = editingSetId === s.id
+                  return (
+                    <motion.li
+                      key={s.id}
+                      className={cn(
+                        "px-3 py-2.5",
+                        flashId === s.id && "bg-accent-muted",
+                      )}
+                      animate={
+                        flashId === s.id
+                          ? {
+                              backgroundColor: [
+                                "rgba(245,166,35,0.28)",
+                                "rgba(245,166,35,0)",
+                              ],
+                            }
+                          : {}
+                      }
+                      transition={{ duration: 0.5 }}
                     >
-                      <X size={14} />
-                    </button>
-                  </motion.li>
-                ))}
+                      {isEditing ? (
+                        <div className="flex items-center gap-2">
+                          <span className="font-display text-[11px] uppercase tracking-wider text-text-secondary w-12 shrink-0">
+                            № {i + 1}
+                          </span>
+                          <input
+                            autoFocus
+                            type="number"
+                            inputMode="decimal"
+                            step="0.5"
+                            value={editWeight}
+                            onChange={(e) => setEditWeight(e.target.value)}
+                            className="w-16 h-9 bg-surface border border-border rounded-md text-center font-display text-text-primary text-[14px]"
+                          />
+                          <span className="text-text-secondary text-[11px]">кг</span>
+                          <span className="text-text-secondary text-[14px]">×</span>
+                          <input
+                            type="number"
+                            inputMode="numeric"
+                            step="1"
+                            value={editReps}
+                            onChange={(e) => setEditReps(e.target.value)}
+                            className="w-14 h-9 bg-surface border border-border rounded-md text-center font-display text-text-primary text-[14px]"
+                          />
+                          <span className="text-text-secondary text-[11px]">повт</span>
+                          <div className="flex-1" />
+                          <button
+                            onClick={() => commitEditSet(s.id)}
+                            className="p-2 text-success hover:bg-success/10 rounded-md"
+                            aria-label="Зберегти"
+                          >
+                            <Check size={16} />
+                          </button>
+                          <button
+                            onClick={cancelEditSet}
+                            className="p-2 text-text-secondary hover:bg-surface rounded-md"
+                            aria-label="Скасувати"
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-3">
+                          <Check size={14} className="text-success shrink-0" />
+                          <span className="font-display text-[11px] uppercase tracking-wider text-text-secondary w-12 shrink-0">
+                            № {i + 1}
+                          </span>
+                          <button
+                            onClick={() => startEditSet(s)}
+                            className="font-display text-text-primary flex-1 text-[15px] text-left"
+                          >
+                            {formatWeight(s.weight)}
+                            <span className="text-text-secondary text-[12px] mx-1">кг</span>
+                            ×<span className="ml-1">{s.reps}</span>
+                          </button>
+                          <button
+                            onClick={() => handleRemove(s.id)}
+                            className="text-text-secondary hover:text-destructive p-1.5"
+                            aria-label="Видалити підхід"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      )}
+                    </motion.li>
+                  )
+                })}
               </ul>
             </div>
           )}

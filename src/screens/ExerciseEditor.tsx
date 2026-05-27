@@ -47,11 +47,14 @@ export function ExerciseEditor({
   const [workoutName, setWorkoutName] = useState<string>("")
   const [addingName, setAddingName] = useState("")
   const [addingSets, setAddingSets] = useState("3")
+  const [addingReps, setAddingReps] = useState("12")
   const [showAdd, setShowAdd] = useState(false)
   const [editingNameId, setEditingNameId] = useState<string | null>(null)
   const [draftName, setDraftName] = useState("")
   const [editingWeightId, setEditingWeightId] = useState<string | null>(null)
   const [draftWeight, setDraftWeight] = useState("")
+  const [editingRepsId, setEditingRepsId] = useState<string | null>(null)
+  const [draftReps, setDraftReps] = useState("")
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -74,10 +77,12 @@ export function ExerciseEditor({
   async function handleAdd() {
     const name = addingName.trim()
     const sets = parseInt(addingSets, 10)
+    const reps = parseInt(addingReps, 10)
     if (!name || !sets || sets < 1) return
-    await addExercise(workoutTypeId, name, sets)
+    await addExercise(workoutTypeId, name, sets, undefined, reps > 0 ? reps : undefined)
     setAddingName("")
     setAddingSets("3")
+    setAddingReps("12")
     setShowAdd(false)
     await refresh()
   }
@@ -111,6 +116,19 @@ export function ExerciseEditor({
     }
     setEditingWeightId(null)
     setDraftWeight("")
+    await refresh()
+  }
+
+  async function commitReps(id: string) {
+    const raw = draftReps.trim()
+    if (raw === "") {
+      await updateExercise(id, { targetReps: undefined })
+    } else {
+      const n = parseInt(raw, 10)
+      if (!isNaN(n) && n > 0) await updateExercise(id, { targetReps: n })
+    }
+    setEditingRepsId(null)
+    setDraftReps("")
     await refresh()
   }
 
@@ -175,8 +193,10 @@ export function ExerciseEditor({
                     index={i}
                     editingName={editingNameId === ex.id}
                     editingWeight={editingWeightId === ex.id}
+                    editingReps={editingRepsId === ex.id}
                     draftName={draftName}
                     draftWeight={draftWeight}
+                    draftReps={draftReps}
                     onStartEditName={() => {
                       setEditingNameId(ex.id)
                       setDraftName(ex.name)
@@ -191,6 +211,14 @@ export function ExerciseEditor({
                     }}
                     onChangeWeight={setDraftWeight}
                     onCommitWeight={() => commitWeight(ex.id)}
+                    onStartEditReps={() => {
+                      setEditingRepsId(ex.id)
+                      setDraftReps(
+                        ex.targetReps != null ? String(ex.targetReps) : "",
+                      )
+                    }}
+                    onChangeReps={setDraftReps}
+                    onCommitReps={() => commitReps(ex.id)}
                     onSetsChange={(v) => handleSetsChange(ex.id, v)}
                     onDelete={() => handleDelete(ex.id)}
                   />
@@ -223,17 +251,24 @@ export function ExerciseEditor({
               className="bg-bg border-border h-12 text-text-primary text-[15px]"
               autoFocus
             />
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <Input
                 type="number"
                 value={addingSets}
                 onChange={(e) => setAddingSets(e.target.value)}
-                className="w-20 bg-bg border-border h-12 text-center text-text-primary font-display text-lg"
+                className="w-16 bg-bg border-border h-12 text-center text-text-primary font-display text-lg"
                 min="1"
               />
-              <span className="text-text-secondary text-sm">
-                цільових підходів
-              </span>
+              <span className="text-text-secondary text-sm">підх</span>
+              <span className="text-text-secondary text-lg">×</span>
+              <Input
+                type="number"
+                value={addingReps}
+                onChange={(e) => setAddingReps(e.target.value)}
+                className="w-16 bg-bg border-border h-12 text-center text-text-primary font-display text-lg"
+                min="1"
+              />
+              <span className="text-text-secondary text-sm">повт</span>
             </div>
           </div>
           <DialogFooter>
@@ -255,14 +290,19 @@ function SortableExerciseRow({
   index,
   editingName,
   editingWeight,
+  editingReps,
   draftName,
   draftWeight,
+  draftReps,
   onStartEditName,
   onChangeName,
   onCommitName,
   onStartEditWeight,
   onChangeWeight,
   onCommitWeight,
+  onStartEditReps,
+  onChangeReps,
+  onCommitReps,
   onSetsChange,
   onDelete,
 }: {
@@ -270,14 +310,19 @@ function SortableExerciseRow({
   index: number
   editingName: boolean
   editingWeight: boolean
+  editingReps: boolean
   draftName: string
   draftWeight: string
+  draftReps: string
   onStartEditName: () => void
   onChangeName: (v: string) => void
   onCommitName: () => void
   onStartEditWeight: () => void
   onChangeWeight: (v: string) => void
   onCommitWeight: () => void
+  onStartEditReps: () => void
+  onChangeReps: (v: string) => void
+  onCommitReps: () => void
   onSetsChange: (v: string) => void
   onDelete: () => void
 }) {
@@ -300,88 +345,129 @@ function SortableExerciseRow({
       ref={setNodeRef}
       style={style}
       className={cn(
-        "flex items-center gap-2 px-2 py-2.5 min-h-[56px] bg-surface",
+        "flex items-stretch gap-1 px-1.5 py-2 bg-surface",
         isDragging && "opacity-60 shadow-lg z-10 relative",
       )}
     >
       <button
         {...attributes}
         {...listeners}
-        className="p-1.5 text-text-secondary hover:text-text-primary touch-none cursor-grab active:cursor-grabbing min-h-[44px] flex items-center justify-center"
+        className="p-1.5 text-text-secondary hover:text-text-primary touch-none cursor-grab active:cursor-grabbing flex items-center justify-center"
         aria-label="Перетягнути"
       >
         <GripVertical size={16} />
       </button>
-      <span className="font-display text-[12px] text-text-secondary w-5 text-center shrink-0">
-        {String(index + 1).padStart(2, "0")}
-      </span>
-      {editingName ? (
-        <Input
-          autoFocus
-          value={draftName}
-          onChange={(e) => onChangeName(e.target.value)}
-          onBlur={onCommitName}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") onCommitName()
-            if (e.key === "Escape") onCommitName()
-          }}
-          className="flex-1 h-9 bg-bg border-border text-text-primary px-2 text-[15px]"
-        />
-      ) : (
-        <button
-          onClick={onStartEditName}
-          className="flex-1 font-sans font-medium text-text-primary text-[15px] min-w-0 truncate text-left min-h-[44px] flex items-center"
-        >
-          {exercise.name}
-        </button>
-      )}
-      {editingWeight ? (
-        <Input
-          autoFocus
-          type="number"
-          inputMode="decimal"
-          step="0.5"
-          value={draftWeight}
-          onChange={(e) => onChangeWeight(e.target.value)}
-          onBlur={onCommitWeight}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") onCommitWeight()
-            if (e.key === "Escape") onCommitWeight()
-          }}
-          className="w-16 h-9 bg-bg border-border text-center font-display text-text-primary px-1"
-          min="0"
-          placeholder="кг"
-        />
-      ) : (
-        <button
-          onClick={onStartEditWeight}
-          className={cn(
-            "w-16 h-9 rounded-md border border-border bg-bg flex items-center justify-center font-display text-[13px] px-1",
-            exercise.targetWeight != null
-              ? "text-text-primary"
-              : "text-text-secondary",
+      <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+        <div className="flex items-center gap-2 min-h-[28px]">
+          <span className="font-display text-[12px] text-text-secondary w-5 text-center shrink-0">
+            {String(index + 1).padStart(2, "0")}
+          </span>
+          {editingName ? (
+            <Input
+              autoFocus
+              value={draftName}
+              onChange={(e) => onChangeName(e.target.value)}
+              onBlur={onCommitName}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") onCommitName()
+                if (e.key === "Escape") onCommitName()
+              }}
+              className="flex-1 h-9 bg-bg border-border text-text-primary px-2 text-[15px]"
+            />
+          ) : (
+            <button
+              onClick={onStartEditName}
+              className="flex-1 font-sans font-medium text-text-primary text-[15px] min-w-0 truncate text-left"
+            >
+              {exercise.name}
+            </button>
           )}
-          aria-label="Цільова вага"
-        >
-          {exercise.targetWeight != null ? `${exercise.targetWeight}` : "—"}
-        </button>
-      )}
-      <span className="font-display text-[10px] uppercase tracking-wider text-text-secondary shrink-0">
-        кг
-      </span>
-      <Input
-        type="number"
-        value={exercise.targetSets}
-        onChange={(e) => onSetsChange(e.target.value)}
-        className="w-12 h-9 bg-bg border-border text-center font-display text-text-primary px-1"
-        min="1"
-      />
-      <span className="font-display text-[10px] uppercase tracking-wider text-text-secondary shrink-0">
-        підх
-      </span>
+        </div>
+        <div className="flex items-center gap-1.5 pl-7">
+          {editingWeight ? (
+            <Input
+              autoFocus
+              type="number"
+              inputMode="decimal"
+              step="0.5"
+              value={draftWeight}
+              onChange={(e) => onChangeWeight(e.target.value)}
+              onBlur={onCommitWeight}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") onCommitWeight()
+                if (e.key === "Escape") onCommitWeight()
+              }}
+              className="w-16 h-8 bg-bg border-border text-center font-display text-text-primary px-1"
+              min="0"
+            />
+          ) : (
+            <button
+              onClick={onStartEditWeight}
+              className={cn(
+                "h-8 px-2 rounded-md border border-border bg-bg flex items-center gap-1 font-display text-[12px]",
+                exercise.targetWeight != null
+                  ? "text-text-primary"
+                  : "text-text-secondary",
+              )}
+              aria-label="Цільова вага"
+            >
+              {exercise.targetWeight != null ? exercise.targetWeight : "—"}
+              <span className="text-text-secondary text-[10px] uppercase tracking-wider">
+                кг
+              </span>
+            </button>
+          )}
+          <div className="flex items-center gap-1 ml-1">
+            <Input
+              type="number"
+              value={exercise.targetSets}
+              onChange={(e) => onSetsChange(e.target.value)}
+              className="w-11 h-8 bg-bg border-border text-center font-display text-text-primary px-1 text-[13px]"
+              min="1"
+            />
+            <span className="font-display text-[10px] uppercase tracking-wider text-text-secondary">
+              підх
+            </span>
+            <span className="font-display text-text-secondary text-[13px] mx-0.5">×</span>
+            {editingReps ? (
+              <Input
+                autoFocus
+                type="number"
+                inputMode="numeric"
+                step="1"
+                value={draftReps}
+                onChange={(e) => onChangeReps(e.target.value)}
+                onBlur={onCommitReps}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") onCommitReps()
+                  if (e.key === "Escape") onCommitReps()
+                }}
+                className="w-11 h-8 bg-bg border-border text-center font-display text-text-primary px-1 text-[13px]"
+                min="1"
+              />
+            ) : (
+              <button
+                onClick={onStartEditReps}
+                className={cn(
+                  "w-11 h-8 rounded-md border border-border bg-bg flex items-center justify-center font-display text-[13px]",
+                  exercise.targetReps != null
+                    ? "text-text-primary"
+                    : "text-text-secondary",
+                )}
+                aria-label="Цільові повтори"
+              >
+                {exercise.targetReps != null ? exercise.targetReps : "—"}
+              </button>
+            )}
+            <span className="font-display text-[10px] uppercase tracking-wider text-text-secondary">
+              повт
+            </span>
+          </div>
+        </div>
+      </div>
       <button
         onClick={onDelete}
-        className="p-2 text-text-secondary hover:text-destructive min-h-[44px] min-w-[40px] flex items-center justify-center"
+        className="p-2 text-text-secondary hover:text-destructive min-h-[44px] min-w-[40px] flex items-center justify-center self-start"
         aria-label="Видалити вправу"
       >
         <Trash2 size={16} />

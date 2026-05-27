@@ -85,6 +85,13 @@ export async function getLastSetsForExercise(
     .sort((a, b) => a.setNumber - b.setNumber)
 }
 
+export async function updateSet(
+  id: string,
+  patch: Partial<Pick<LoggedSet, "weight" | "reps">>,
+): Promise<void> {
+  await db.loggedSets.update(id, patch)
+}
+
 export async function deleteSet(id: string): Promise<void> {
   await db.loggedSets.delete(id)
 }

@@ -60,7 +60,8 @@ export function ExerciseCard({
               {loggedThisSession}
             </div>
             <div className="font-display text-[11px] text-text-secondary mt-1">
-              / {exercise.targetSets} підх
+              / {exercise.targetSets}
+              {exercise.targetReps ? ` × ${exercise.targetReps}` : ""} підх
             </div>
           </div>
           <ChevronRight

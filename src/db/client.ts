@@ -26,6 +26,14 @@ export class GymDB extends Dexie {
       sessions: "id, date, workoutTypeId",
       loggedSets: "id, sessionId, exerciseName, loggedAt",
     })
+    this.version(2).stores({
+      programs: "id, name, createdAt",
+      workoutTypes: "id, programId, order",
+      schedule: "dayOfWeek, workoutTypeId",
+      exercises: "id, workoutTypeId, order",
+      sessions: "id, date, workoutTypeId",
+      loggedSets: "id, sessionId, exerciseName, loggedAt",
+    })
   }
 }
 

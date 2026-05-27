@@ -23,6 +23,7 @@ export interface ExerciseTemplate {
   workoutTypeId: string
   name: string
   targetSets: number
+  targetReps?: number
   targetWeight?: number
   order: number
 }
