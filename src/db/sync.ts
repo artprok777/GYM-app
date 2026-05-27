@@ -164,10 +164,13 @@ export async function pushQueue(): Promise<void> {
       try {
         await pushEntry(entry)
         await db.syncQueue.update(entry.id, { syncedAt: Date.now() })
+        console.log("[sync] pushed", entry.op, entry.table, entry.recordId)
       } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        console.error("[sync] push failed", entry.op, entry.table, entry.recordId, msg, err)
         await db.syncQueue.update(entry.id, {
           attempts: entry.attempts + 1,
-          lastError: err instanceof Error ? err.message : String(err),
+          lastError: msg,
         })
       }
     }
@@ -227,6 +230,20 @@ async function bootstrapInitialUpload(): Promise<void> {
 
 export async function bootstrap(): Promise<void> {
   console.log("[sync] cloudEnabled =", cloudEnabled, "USER_ID =", USER_ID || "(empty)")
+  if (typeof window !== "undefined") {
+    ;(window as unknown as { gymSync: unknown }).gymSync = {
+      pushQueue,
+      pullChanges,
+      bootstrap,
+      queue: () => db.syncQueue.toArray(),
+      pending: () => db.syncQueue.filter((e) => e.syncedAt == null).toArray(),
+      forceReupload: async () => {
+        localStorage.removeItem("gym-tracker:has_synced_once")
+        await bootstrapInitialUpload()
+        await pushQueue()
+      },
+    }
+  }
   if (!cloudEnabled) {
     console.warn("[sync] cloud disabled — VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY / VITE_USER_ID env vars missing")
     return
