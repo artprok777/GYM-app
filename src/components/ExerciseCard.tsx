@@ -32,7 +32,7 @@ export function ExerciseCard({
           <div className="font-display font-medium text-text-primary text-[18px] leading-tight tracking-tight truncate">
             {exercise.name}
           </div>
-          <dl className="space-y-1">
+          <dl className="flex items-baseline gap-x-5 gap-y-1 flex-wrap">
             <Row label="Підходи" value={String(exercise.targetSets)} />
             <Row
               label="Повтори"
@@ -64,8 +64,8 @@ export function ExerciseCard({
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-baseline gap-2">
-      <dt className="font-display text-[11px] uppercase tracking-[0.15em] text-text-secondary w-[60px] shrink-0">
+    <div className="flex items-baseline gap-1.5">
+      <dt className="font-display text-[11px] uppercase tracking-[0.15em] text-text-secondary">
         {label}
       </dt>
       <dd className="font-display text-[14px] text-text-primary tabular-nums">
