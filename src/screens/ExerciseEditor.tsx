@@ -35,6 +35,7 @@ import {
 import { listWorkoutTypes, listPrograms } from "@/db/programs"
 import type { ExerciseTemplate } from "@/db/schema"
 import { cn } from "@/lib/utils"
+import { useSyncRefresh } from "@/hooks/useSyncRefresh"
 
 export function ExerciseEditor({
   workoutTypeId,
@@ -73,6 +74,8 @@ export function ExerciseEditor({
   useEffect(() => {
     refresh()
   }, [workoutTypeId])
+
+  useSyncRefresh(refresh)
 
   async function handleAdd() {
     const name = addingName.trim()

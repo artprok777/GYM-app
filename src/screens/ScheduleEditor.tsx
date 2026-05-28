@@ -11,6 +11,7 @@ import { listPrograms, listWorkoutTypes } from "@/db/programs"
 import type { ScheduleEntry, WorkoutType, DayOfWeek } from "@/db/schema"
 import { ukDayName } from "@/lib/format"
 import { cn } from "@/lib/utils"
+import { useSyncRefresh } from "@/hooks/useSyncRefresh"
 
 export function ScheduleEditor() {
   const [schedule, setSchedule] = useState<ScheduleEntry[]>([])
@@ -25,6 +26,8 @@ export function ScheduleEditor() {
   useEffect(() => {
     refresh()
   }, [])
+
+  useSyncRefresh(refresh)
 
   async function assign(day: DayOfWeek, wtId: string | null) {
     await setScheduleEntry(day, wtId)

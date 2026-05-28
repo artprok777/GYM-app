@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import {
   LineChart,
   Line,
@@ -22,6 +22,7 @@ import {
   type ExerciseHistoryPoint,
 } from "@/db/progress"
 import { formatWeight } from "@/lib/format"
+import { useSyncRefresh } from "@/hooks/useSyncRefresh"
 
 const RANGES = [
   { label: "1 місяць", days: 30 },
@@ -37,20 +38,32 @@ export function ProgressByExercise() {
   const [history, setHistory] = useState<ExerciseHistoryPoint[]>([])
   const [pr, setPr] = useState<number | null>(null)
 
-  useEffect(() => {
-    db.loggedSets.toArray().then((sets) => {
-      const names = [...new Set(sets.map((s) => s.exerciseName))].sort()
-      setExercises(names)
-      if (!selected && names[0]) setSelected(names[0])
-    })
+  const loadExercises = useCallback(async () => {
+    const sets = await db.loggedSets.toArray()
+    const names = [...new Set(sets.map((s) => s.exerciseName))].sort()
+    setExercises(names)
+    setSelected((cur) => cur ?? names[0] ?? null)
   }, [])
 
-  useEffect(() => {
+  const loadHistory = useCallback(async () => {
     if (!selected) return
     const from = range.days > 0 ? Date.now() - range.days * 86400000 : undefined
-    getExerciseHistory(selected, from).then(setHistory)
-    getPersonalRecord(selected).then(setPr)
+    setHistory(await getExerciseHistory(selected, from))
+    setPr(await getPersonalRecord(selected))
   }, [selected, range])
+
+  useEffect(() => {
+    loadExercises()
+  }, [loadExercises])
+
+  useEffect(() => {
+    loadHistory()
+  }, [loadHistory])
+
+  useSyncRefresh(useCallback(async () => {
+    await loadExercises()
+    await loadHistory()
+  }, [loadExercises, loadHistory]))
 
   const chartData = useMemo(
     () =>

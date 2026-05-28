@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -15,6 +15,7 @@ import {
 } from "@/db/progress"
 import type { WorkoutType } from "@/db/schema"
 import { formatWeight } from "@/lib/format"
+import { useSyncRefresh } from "@/hooks/useSyncRefresh"
 
 interface Row {
   name: string
@@ -29,37 +30,46 @@ export function ProgressByWorkout() {
   const [rows, setRows] = useState<Row[]>([])
   const [dates, setDates] = useState<number[]>([])
 
-  useEffect(() => {
-    ;(async () => {
-      const programs = await listPrograms()
-      if (!programs[0]) return
-      const t = await listWorkoutTypes(programs[0].id)
-      setTypes(t)
-      if (t[0]) setSelectedId(t[0].id)
-    })()
+  const loadTypes = useCallback(async () => {
+    const programs = await listPrograms()
+    if (!programs[0]) return
+    const t = await listWorkoutTypes(programs[0].id)
+    setTypes(t)
+    setSelectedId((cur) => cur ?? t[0]?.id ?? null)
   }, [])
 
-  useEffect(() => {
+  const loadProgress = useCallback(async () => {
     if (!selectedId) return
-    ;(async () => {
-      const ex = await listExercises(selectedId)
-      const progress = await getWorkoutProgress(
-        selectedId,
-        ex.map((e) => e.name),
-      )
-      const computed: Row[] = progress.map((p) => ({
-        name: p.exerciseName,
-        first: p.firstWeight,
-        latest: p.latestWeight,
-        delta:
-          p.firstWeight === 0
-            ? 0
-            : ((p.latestWeight - p.firstWeight) / p.firstWeight) * 100,
-      }))
-      setRows(computed)
-      setDates(await getSessionDatesForWorkoutType(selectedId))
-    })()
+    const ex = await listExercises(selectedId)
+    const progress = await getWorkoutProgress(
+      selectedId,
+      ex.map((e) => e.name),
+    )
+    const computed: Row[] = progress.map((p) => ({
+      name: p.exerciseName,
+      first: p.firstWeight,
+      latest: p.latestWeight,
+      delta:
+        p.firstWeight === 0
+          ? 0
+          : ((p.latestWeight - p.firstWeight) / p.firstWeight) * 100,
+    }))
+    setRows(computed)
+    setDates(await getSessionDatesForWorkoutType(selectedId))
   }, [selectedId])
+
+  useEffect(() => {
+    loadTypes()
+  }, [loadTypes])
+
+  useEffect(() => {
+    loadProgress()
+  }, [loadProgress])
+
+  useSyncRefresh(useCallback(async () => {
+    await loadTypes()
+    await loadProgress()
+  }, [loadTypes, loadProgress]))
 
   const selectedName = types.find((t) => t.id === selectedId)?.name
 

@@ -8,6 +8,13 @@ const BOOTSTRAP_KEY = "gym-tracker:has_synced_once"
 const PUSH_INTERVAL_MS = 5000
 const PULL_INTERVAL_MS = 15000
 const MAX_BATCH = 50
+export const SYNC_EVENT = "gym-sync:changed"
+
+function emitSyncChanged(): void {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent(SYNC_EVENT))
+  }
+}
 
 type Row = { id?: string; dayOfWeek?: number; updatedAt: number; deletedAt?: number }
 
@@ -91,29 +98,32 @@ function fromRemoteRow(table: SyncTable, row: Record<string, unknown>): Row {
   return camel as unknown as Row
 }
 
-async function applyRemoteRow(table: SyncTable, row: Row): Promise<void> {
+async function applyRemoteRow(table: SyncTable, row: Row): Promise<boolean> {
   const tbl = db.table(table)
   if (table === "schedule") {
     const dow = (row as ScheduleEntry).dayOfWeek
     if (row.deletedAt != null) {
       await tbl.delete(dow)
-      return
+      return true
     }
     const local = (await tbl.get(dow)) as ScheduleEntry | undefined
     if (!local || (local.updatedAt ?? 0) < row.updatedAt) {
       await tbl.put(row)
+      return true
     }
-    return
+    return false
   }
   const id = row.id!
   if (row.deletedAt != null) {
     await tbl.delete(id)
-    return
+    return true
   }
   const local = (await tbl.get(id)) as Row | undefined
   if (!local || (local.updatedAt ?? 0) < row.updatedAt) {
     await tbl.put(row)
+    return true
   }
+  return false
 }
 
 async function pushEntry(entry: SyncQueueEntry): Promise<void> {
@@ -184,6 +194,7 @@ export async function pullChanges(): Promise<void> {
   if (!cloudEnabled || !supabase || !navigator.onLine) return
   const since = localStorage.getItem(LAST_PULLED_KEY) ?? "1970-01-01T00:00:00Z"
   const startedAt = new Date().toISOString()
+  let anyChanged = false
   for (const local of Object.keys(TABLE_TO_REMOTE) as SyncTable[]) {
     const remote = TABLE_TO_REMOTE[local]
     const { data, error } = await supabase
@@ -196,10 +207,12 @@ export async function pullChanges(): Promise<void> {
       continue
     }
     for (const row of data ?? []) {
-      await applyRemoteRow(local, fromRemoteRow(local, row))
+      const changed = await applyRemoteRow(local, fromRemoteRow(local, row))
+      if (changed) anyChanged = true
     }
   }
   localStorage.setItem(LAST_PULLED_KEY, startedAt)
+  if (anyChanged) emitSyncChanged()
 }
 
 async function bootstrapInitialUpload(): Promise<void> {
@@ -308,9 +321,11 @@ export function startSync(): () => void {
         const local = REMOTE_TO_LOCAL[remote]
         const row = payload.new ?? payload.old
         if (!row) return
-        applyRemoteRow(local, fromRemoteRow(local, row)).catch((e) =>
-          console.error("[sync] realtime apply error", e),
-        )
+        applyRemoteRow(local, fromRemoteRow(local, row))
+          .then((changed) => {
+            if (changed) emitSyncChanged()
+          })
+          .catch((e) => console.error("[sync] realtime apply error", e))
       },
     )
   }
