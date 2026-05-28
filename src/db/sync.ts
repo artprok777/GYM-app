@@ -6,6 +6,7 @@ import { uid } from "@/lib/id"
 const LAST_PULLED_KEY = "gym-tracker:last_pulled_at"
 const BOOTSTRAP_KEY = "gym-tracker:has_synced_once"
 const PUSH_INTERVAL_MS = 5000
+const PULL_INTERVAL_MS = 15000
 const MAX_BATCH = 50
 
 type Row = { id?: string; dayOfWeek?: number; updatedAt: number; deletedAt?: number }
@@ -256,15 +257,31 @@ export async function bootstrap(): Promise<void> {
 export function startSync(): () => void {
   if (!cloudEnabled || !supabase) return () => {}
 
-  const intervalId = setInterval(() => {
+  const pushIntervalId = setInterval(() => {
     pushQueue()
   }, PUSH_INTERVAL_MS)
+
+  const pullIntervalId = setInterval(() => {
+    if (document.visibilityState === "visible") pullChanges()
+  }, PULL_INTERVAL_MS)
 
   const onOnline = () => {
     pushQueue()
     pullChanges()
   }
+  const onVisibility = () => {
+    if (document.visibilityState === "visible") {
+      pullChanges()
+      pushQueue()
+    }
+  }
+  const onFocus = () => {
+    pullChanges()
+    pushQueue()
+  }
   window.addEventListener("online", onOnline)
+  document.addEventListener("visibilitychange", onVisibility)
+  window.addEventListener("focus", onFocus)
 
   const sb = supabase
   const channel = sb.channel("gym-sync")
@@ -300,8 +317,11 @@ export function startSync(): () => void {
   channel.subscribe()
 
   return () => {
-    clearInterval(intervalId)
+    clearInterval(pushIntervalId)
+    clearInterval(pullIntervalId)
     window.removeEventListener("online", onOnline)
+    document.removeEventListener("visibilitychange", onVisibility)
+    window.removeEventListener("focus", onFocus)
     sb.removeChannel(channel)
   }
 }
