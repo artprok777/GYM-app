@@ -54,4 +54,14 @@ describe("exercises db", () => {
     await deleteExercise(ex.id)
     expect(await listExercises(wt.id)).toHaveLength(0)
   })
+
+  it("stores targetReps when provided and updates it", async () => {
+    const p = await createProgram("p")
+    const wt = await addWorkoutType(p.id, "A")
+    const ex = await addExercise(wt.id, "Deadlift", 4, undefined, 12)
+    expect(ex.targetReps).toBe(12)
+    await updateExercise(ex.id, { targetReps: 8 })
+    const list = await listExercises(wt.id)
+    expect(list[0].targetReps).toBe(8)
+  })
 })

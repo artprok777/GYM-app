@@ -51,11 +51,14 @@ describe("programs db", () => {
       name: "Squat",
       targetSets: 3,
       order: 0,
+      updatedAt: Date.now(),
     })
     await deleteWorkoutType(wt.id)
     const types = await listWorkoutTypes(program.id)
     expect(types).toHaveLength(0)
-    const ex = await db.exercises.where("workoutTypeId").equals(wt.id).count()
-    expect(ex).toBe(0)
+    const liveEx = (
+      await db.exercises.where("workoutTypeId").equals(wt.id).toArray()
+    ).filter((e) => e.deletedAt == null)
+    expect(liveEx).toHaveLength(0)
   })
 })

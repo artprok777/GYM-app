@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import {
   BarChart,
   Bar,
@@ -9,21 +9,26 @@ import {
 } from "recharts"
 import { getSessionsByWeek, type WeekStat } from "@/db/progress"
 import { db } from "@/db/client"
+import { useSyncRefresh } from "@/hooks/useSyncRefresh"
 
 export function ProgressOverall() {
   const [weeks, setWeeks] = useState<WeekStat[]>([])
   const [totalSessions, setTotalSessions] = useState(0)
   const [streak, setStreak] = useState(0)
 
-  useEffect(() => {
-    ;(async () => {
-      const w = await getSessionsByWeek()
-      setWeeks(w.slice(-12))
-      const sessions = await db.sessions.count()
-      setTotalSessions(sessions)
-      setStreak(computeStreak(w))
-    })()
+  const refresh = useCallback(async () => {
+    const w = await getSessionsByWeek()
+    setWeeks(w.slice(-12))
+    const sessions = await db.sessions.count()
+    setTotalSessions(sessions)
+    setStreak(computeStreak(w))
   }, [])
+
+  useEffect(() => {
+    refresh()
+  }, [refresh])
+
+  useSyncRefresh(refresh)
 
   const chartData = weeks.map((w) => ({
     week: new Date(w.weekStart).toLocaleDateString("uk-UA", {

@@ -10,6 +10,7 @@ import { useBodyScrollLock } from "@/hooks/useBodyScrollLock"
 interface DraftExercise {
   name: string
   targetSets: number
+  targetReps?: number
   targetWeight?: number
 }
 
@@ -26,6 +27,7 @@ export function CreateWorkoutSheet({
   const [exercises, setExercises] = useState<DraftExercise[]>([])
   const [exName, setExName] = useState("")
   const [exSets, setExSets] = useState("3")
+  const [exReps, setExReps] = useState("12")
   const [exWeight, setExWeight] = useState("")
   const [saving, setSaving] = useState(false)
   const dragControls = useDragControls()
@@ -35,14 +37,21 @@ export function CreateWorkoutSheet({
     const name = exName.trim()
     if (!name) return
     const sets = parseInt(exSets, 10) || 3
+    const reps = parseInt(exReps, 10)
     const w = parseFloat(exWeight.replace(",", "."))
     setExercises((prev) => [
       ...prev,
-      { name, targetSets: sets, targetWeight: w > 0 ? w : undefined },
+      {
+        name,
+        targetSets: sets,
+        targetReps: reps > 0 ? reps : undefined,
+        targetWeight: w > 0 ? w : undefined,
+      },
     ])
     setExName("")
     setExWeight("")
     setExSets("3")
+    setExReps("12")
   }
 
   function removeDraft(idx: number) {
@@ -55,7 +64,13 @@ export function CreateWorkoutSheet({
     setSaving(true)
     const wt = await addWorkoutType(programId, name)
     for (const ex of exercises) {
-      await addExercise(wt.id, ex.name, ex.targetSets, ex.targetWeight)
+      await addExercise(
+        wt.id,
+        ex.name,
+        ex.targetSets,
+        ex.targetWeight,
+        ex.targetReps,
+      )
     }
     onCreated()
     onClose()
@@ -143,7 +158,8 @@ export function CreateWorkoutSheet({
                       {ex.name}
                     </span>
                     <span className="font-display text-[11px] text-text-secondary shrink-0">
-                      {ex.targetSets} підх
+                      {ex.targetSets}
+                      {ex.targetReps ? ` × ${ex.targetReps}` : ""} підх
                       {ex.targetWeight ? ` · ${ex.targetWeight} кг` : ""}
                     </span>
                     <button
@@ -177,11 +193,23 @@ export function CreateWorkoutSheet({
                   type="number"
                   value={exSets}
                   onChange={(e) => setExSets(e.target.value)}
-                  className="w-14 bg-surface border-border h-11 text-center font-display text-text-primary"
+                  className="w-12 bg-surface border-border h-11 text-center font-display text-text-primary px-1"
                   min="1"
                 />
                 <span className="font-display text-[11px] text-text-secondary uppercase tracking-wider whitespace-nowrap">
                   підх
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Input
+                  type="number"
+                  value={exReps}
+                  onChange={(e) => setExReps(e.target.value)}
+                  className="w-12 bg-surface border-border h-11 text-center font-display text-text-primary px-1"
+                  min="1"
+                />
+                <span className="font-display text-[11px] text-text-secondary uppercase tracking-wider whitespace-nowrap">
+                  повт
                 </span>
               </div>
               <div className="flex items-center gap-1.5 flex-1">
@@ -191,7 +219,7 @@ export function CreateWorkoutSheet({
                   placeholder="кг"
                   value={exWeight}
                   onChange={(e) => setExWeight(e.target.value)}
-                  className="flex-1 bg-surface border-border h-11 text-center font-display text-text-primary"
+                  className="flex-1 bg-surface border-border h-11 text-center font-display text-text-primary px-1"
                 />
                 <span className="font-display text-[11px] text-text-secondary uppercase tracking-wider">
                   кг

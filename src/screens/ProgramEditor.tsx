@@ -29,6 +29,7 @@ import {
 import { CreateWorkoutSheet } from "@/components/CreateWorkoutSheet"
 import type { Program, WorkoutType } from "@/db/schema"
 import { cn } from "@/lib/utils"
+import { useSyncRefresh } from "@/hooks/useSyncRefresh"
 
 export function ProgramEditor({
   onSelectWorkoutType,
@@ -57,6 +58,8 @@ export function ProgramEditor({
   useEffect(() => {
     refresh()
   }, [])
+
+  useSyncRefresh(refresh)
 
   function handleAdd() {
     if (!program) return

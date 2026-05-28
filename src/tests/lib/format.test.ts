@@ -19,6 +19,7 @@ describe("formatLastSession", () => {
     reps: r,
     setNumber: n,
     loggedAt: 0,
+    updatedAt: 0,
   })
 
   it("returns empty marker when no sets", () => {

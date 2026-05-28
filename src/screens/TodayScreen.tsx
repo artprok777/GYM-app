@@ -23,6 +23,7 @@ import type {
   LoggedSet,
 } from "@/db/schema"
 import { ukDayName } from "@/lib/format"
+import { useSyncRefresh } from "@/hooks/useSyncRefresh"
 
 interface ExerciseState {
   exercise: ExerciseTemplate
@@ -77,6 +78,11 @@ export default function TodayScreen() {
   useEffect(() => {
     loadSession()
   }, [selectedTypeId])
+
+  useSyncRefresh(async () => {
+    await loadTypes()
+    await loadSession()
+  })
 
   const today = new Date().getDay()
   const selectedType = allTypes.find((t) => t.id === selectedTypeId)

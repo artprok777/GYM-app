@@ -3,6 +3,7 @@ import { TabBar, type Tab } from "./components/TabBar"
 import TodayScreen from "./screens/TodayScreen"
 import ProgramScreen from "./screens/ProgramScreen"
 import ProgressScreen from "./screens/ProgressScreen"
+import { bootstrap, startSync } from "./db/sync"
 
 export default function App() {
   const [tab, setTab] = useState<Tab>("today")
@@ -13,6 +14,16 @@ export default function App() {
         window.location.reload()
       })
     }
+  }, [])
+
+  useEffect(() => {
+    let cleanup: (() => void) | undefined
+    bootstrap()
+      .catch((e) => console.error("[sync] bootstrap failed", e))
+      .finally(() => {
+        cleanup = startSync()
+      })
+    return () => cleanup?.()
   }, [])
 
   return (

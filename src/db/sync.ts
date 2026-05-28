@@ -1,0 +1,344 @@
+import { db } from "./client"
+import { supabase, USER_ID, cloudEnabled } from "./supabase"
+import type { ScheduleEntry, SyncQueueEntry, SyncTable } from "./schema"
+import { uid } from "@/lib/id"
+
+const LAST_PULLED_KEY = "gym-tracker:last_pulled_at"
+const BOOTSTRAP_KEY = "gym-tracker:has_synced_once"
+const PUSH_INTERVAL_MS = 5000
+const PULL_INTERVAL_MS = 15000
+const MAX_BATCH = 50
+export const SYNC_EVENT = "gym-sync:changed"
+
+function emitSyncChanged(): void {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent(SYNC_EVENT))
+  }
+}
+
+type Row = { id?: string; dayOfWeek?: number; updatedAt: number; deletedAt?: number }
+
+const TABLE_TO_REMOTE: Record<SyncTable, string> = {
+  programs: "programs",
+  workoutTypes: "workout_types",
+  schedule: "schedule",
+  exercises: "exercises",
+  sessions: "sessions",
+  loggedSets: "logged_sets",
+}
+
+const REMOTE_TO_LOCAL: Record<string, SyncTable> = Object.fromEntries(
+  Object.entries(TABLE_TO_REMOTE).map(([k, v]) => [v, k as SyncTable]),
+) as Record<string, SyncTable>
+
+export async function enqueue(
+  op: "upsert" | "delete",
+  table: SyncTable,
+  recordId: string,
+  payload: unknown,
+): Promise<void> {
+  if (!cloudEnabled) return
+  const entry: SyncQueueEntry = {
+    id: uid(),
+    op,
+    table,
+    recordId,
+    payload,
+    createdAt: Date.now(),
+    attempts: 0,
+  }
+  await db.syncQueue.add(entry)
+}
+
+function camelToSnake(row: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {}
+  for (const [k, v] of Object.entries(row)) {
+    const snake = k.replace(/[A-Z]/g, (c) => "_" + c.toLowerCase())
+    out[snake] = v
+  }
+  return out
+}
+
+function snakeToCamel(row: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {}
+  for (const [k, v] of Object.entries(row)) {
+    const camel = k.replace(/_([a-z])/g, (_, c) => c.toUpperCase())
+    out[camel] = v
+  }
+  return out
+}
+
+function toRemotePayload(table: SyncTable, payload: unknown): Record<string, unknown> {
+  const snake = camelToSnake(payload as Record<string, unknown>)
+  snake.user_id = USER_ID
+  if (snake.updated_at != null) {
+    snake.updated_at = new Date(snake.updated_at as number).toISOString()
+  }
+  if (snake.deleted_at != null) {
+    snake.deleted_at = new Date(snake.deleted_at as number).toISOString()
+  }
+  if (table === "schedule") {
+    delete snake.id // schedule has composite PK
+  }
+  return snake
+}
+
+function fromRemoteRow(table: SyncTable, row: Record<string, unknown>): Row {
+  const camel = snakeToCamel(row)
+  if (camel.updatedAt != null) {
+    camel.updatedAt = new Date(camel.updatedAt as string).getTime()
+  }
+  if (camel.deletedAt != null) {
+    camel.deletedAt = new Date(camel.deletedAt as string).getTime()
+  }
+  delete camel.userId
+  if (table === "schedule") {
+    camel.id = undefined
+  }
+  return camel as unknown as Row
+}
+
+async function applyRemoteRow(table: SyncTable, row: Row): Promise<boolean> {
+  const tbl = db.table(table)
+  if (table === "schedule") {
+    const dow = (row as ScheduleEntry).dayOfWeek
+    if (row.deletedAt != null) {
+      await tbl.delete(dow)
+      return true
+    }
+    const local = (await tbl.get(dow)) as ScheduleEntry | undefined
+    if (!local || (local.updatedAt ?? 0) < row.updatedAt) {
+      await tbl.put(row)
+      return true
+    }
+    return false
+  }
+  const id = row.id!
+  if (row.deletedAt != null) {
+    await tbl.delete(id)
+    return true
+  }
+  const local = (await tbl.get(id)) as Row | undefined
+  if (!local || (local.updatedAt ?? 0) < row.updatedAt) {
+    await tbl.put(row)
+    return true
+  }
+  return false
+}
+
+async function pushEntry(entry: SyncQueueEntry): Promise<void> {
+  if (!supabase) throw new Error("Supabase not configured")
+  const remoteTable = TABLE_TO_REMOTE[entry.table]
+  if (entry.op === "upsert") {
+    const payload = toRemotePayload(entry.table, entry.payload)
+    const onConflict =
+      entry.table === "schedule" ? "user_id,day_of_week" : "id"
+    const { error } = await supabase
+      .from(remoteTable)
+      .upsert(payload, { onConflict })
+    if (error) throw error
+  } else {
+    if (entry.table === "schedule") {
+      const dow = parseInt(entry.recordId, 10)
+      const { error } = await supabase
+        .from(remoteTable)
+        .update({ deleted_at: new Date().toISOString() })
+        .eq("user_id", USER_ID)
+        .eq("day_of_week", dow)
+      if (error) throw error
+    } else {
+      const { error } = await supabase
+        .from(remoteTable)
+        .update({ deleted_at: new Date().toISOString() })
+        .eq("id", entry.recordId)
+      if (error) throw error
+    }
+  }
+}
+
+let pushInFlight = false
+
+export async function pushQueue(): Promise<void> {
+  if (!cloudEnabled || !navigator.onLine || pushInFlight) return
+  pushInFlight = true
+  try {
+    const now = Date.now()
+    const pending = await db.syncQueue
+      .filter((e) => {
+        if (e.syncedAt != null) return false
+        const backoff = Math.min(60_000, 1000 * Math.pow(4, e.attempts))
+        return now - (e.createdAt + backoff * Math.max(0, e.attempts)) >= 0
+      })
+      .limit(MAX_BATCH)
+      .toArray()
+    for (const entry of pending) {
+      try {
+        await pushEntry(entry)
+        await db.syncQueue.update(entry.id, { syncedAt: Date.now() })
+        console.log("[sync] pushed", entry.op, entry.table, entry.recordId)
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        console.error("[sync] push failed", entry.op, entry.table, entry.recordId, msg, err)
+        await db.syncQueue.update(entry.id, {
+          attempts: entry.attempts + 1,
+          lastError: msg,
+        })
+      }
+    }
+  } finally {
+    pushInFlight = false
+  }
+}
+
+export async function pullChanges(): Promise<void> {
+  if (!cloudEnabled || !supabase || !navigator.onLine) return
+  const since = localStorage.getItem(LAST_PULLED_KEY) ?? "1970-01-01T00:00:00Z"
+  const startedAt = new Date().toISOString()
+  let anyChanged = false
+  for (const local of Object.keys(TABLE_TO_REMOTE) as SyncTable[]) {
+    const remote = TABLE_TO_REMOTE[local]
+    const { data, error } = await supabase
+      .from(remote)
+      .select("*")
+      .eq("user_id", USER_ID)
+      .gt("updated_at", since)
+    if (error) {
+      console.error("[sync] pull error", remote, error)
+      continue
+    }
+    for (const row of data ?? []) {
+      const changed = await applyRemoteRow(local, fromRemoteRow(local, row))
+      if (changed) anyChanged = true
+    }
+  }
+  localStorage.setItem(LAST_PULLED_KEY, startedAt)
+  if (anyChanged) emitSyncChanged()
+}
+
+async function bootstrapInitialUpload(): Promise<void> {
+  if (!cloudEnabled) return
+  if (localStorage.getItem(BOOTSTRAP_KEY)) return
+  const now = Date.now()
+  const tables: SyncTable[] = [
+    "programs",
+    "workoutTypes",
+    "schedule",
+    "exercises",
+    "sessions",
+    "loggedSets",
+  ]
+  for (const t of tables) {
+    const rows = await db.table(t).toArray()
+    for (const row of rows) {
+      if (row.updatedAt == null) {
+        row.updatedAt = now
+        await db.table(t).put(row)
+      }
+      const recordId =
+        t === "schedule" ? String(row.dayOfWeek) : (row.id as string)
+      await enqueue("upsert", t, recordId, row)
+    }
+  }
+  localStorage.setItem(BOOTSTRAP_KEY, String(Date.now()))
+}
+
+export async function bootstrap(): Promise<void> {
+  console.log("[sync] cloudEnabled =", cloudEnabled, "USER_ID =", USER_ID || "(empty)")
+  if (typeof window !== "undefined") {
+    ;(window as unknown as { gymSync: unknown }).gymSync = {
+      pushQueue,
+      pullChanges,
+      bootstrap,
+      queue: () => db.syncQueue.toArray(),
+      pending: () => db.syncQueue.filter((e) => e.syncedAt == null).toArray(),
+      forceReupload: async () => {
+        localStorage.removeItem("gym-tracker:has_synced_once")
+        await bootstrapInitialUpload()
+        await pushQueue()
+      },
+    }
+  }
+  if (!cloudEnabled) {
+    console.warn("[sync] cloud disabled — VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY / VITE_USER_ID env vars missing")
+    return
+  }
+  await bootstrapInitialUpload()
+  await pullChanges()
+  await pushQueue()
+}
+
+export function startSync(): () => void {
+  if (!cloudEnabled || !supabase) return () => {}
+
+  const pushIntervalId = setInterval(() => {
+    pushQueue()
+  }, PUSH_INTERVAL_MS)
+
+  const pullIntervalId = setInterval(() => {
+    if (document.visibilityState === "visible") pullChanges()
+  }, PULL_INTERVAL_MS)
+
+  const onOnline = () => {
+    pushQueue()
+    pullChanges()
+  }
+  const onVisibility = () => {
+    if (document.visibilityState === "visible") {
+      pullChanges()
+      pushQueue()
+    }
+  }
+  const onFocus = () => {
+    pullChanges()
+    pushQueue()
+  }
+  window.addEventListener("online", onOnline)
+  document.addEventListener("visibilitychange", onVisibility)
+  window.addEventListener("focus", onFocus)
+
+  const sb = supabase
+  const channel = sb.channel("gym-sync")
+  for (const remote of Object.keys(REMOTE_TO_LOCAL)) {
+    // realtime event signature is loosely typed in v2
+    ;(channel as unknown as {
+      on: (
+        event: string,
+        filter: unknown,
+        handler: (payload: {
+          new?: Record<string, unknown>
+          old?: Record<string, unknown>
+        }) => void,
+      ) => void
+    }).on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: remote,
+        filter: `user_id=eq.${USER_ID}`,
+      },
+      (payload) => {
+        const local = REMOTE_TO_LOCAL[remote]
+        const row = payload.new ?? payload.old
+        if (!row) return
+        applyRemoteRow(local, fromRemoteRow(local, row))
+          .then((changed) => {
+            if (changed) emitSyncChanged()
+          })
+          .catch((e) => console.error("[sync] realtime apply error", e))
+      },
+    )
+  }
+  channel.subscribe()
+
+  return () => {
+    clearInterval(pushIntervalId)
+    clearInterval(pullIntervalId)
+    window.removeEventListener("online", onOnline)
+    document.removeEventListener("visibilitychange", onVisibility)
+    window.removeEventListener("focus", onFocus)
+    sb.removeChannel(channel)
+  }
+}
+
+export type { SyncQueueEntry } from "./schema"
