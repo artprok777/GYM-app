@@ -1,16 +1,13 @@
-import { ChevronRight } from "lucide-react"
-import { formatLastSession } from "@/lib/format"
-import type { ExerciseTemplate, LoggedSet } from "@/db/schema"
+import { ArrowRight } from "lucide-react"
+import type { ExerciseTemplate } from "@/db/schema"
 import { cn } from "@/lib/utils"
 
 export function ExerciseCard({
   exercise,
-  lastSets,
   loggedThisSession,
   onClick,
 }: {
   exercise: ExerciseTemplate
-  lastSets: LoggedSet[]
   loggedThisSession: number
   onClick: () => void
 }) {
@@ -21,7 +18,7 @@ export function ExerciseCard({
     <button
       onClick={onClick}
       className={cn(
-        "group w-full text-left rounded-xl border px-4 py-4",
+        "group w-full text-left rounded-xl border px-5 py-4",
         "transition-all active:scale-[0.985]",
         isComplete
           ? "bg-success/[0.05] border-success/25"
@@ -31,45 +28,49 @@ export function ExerciseCard({
       )}
     >
       <div className="flex items-center gap-4">
-        <div className="flex-1 min-w-0 space-y-1.5">
+        <div className="flex-1 min-w-0 space-y-3">
           <div className="font-display font-medium text-text-primary text-[18px] leading-tight tracking-tight truncate">
             {exercise.name}
           </div>
-          <div className="flex items-center gap-1.5">
-            <span className="font-display text-[10px] uppercase tracking-[0.15em] text-text-secondary">
-              Минулого
-            </span>
-            <span className="font-display text-[13px] text-text-primary">
-              {formatLastSession(lastSets)}
-            </span>
-          </div>
+          <dl className="flex items-baseline gap-x-5 gap-y-1 flex-wrap">
+            <Row label="Підходи" value={String(exercise.targetSets)} />
+            <Row
+              label="Повтори"
+              value={exercise.targetReps != null ? String(exercise.targetReps) : "—"}
+            />
+            <Row
+              label="Вага"
+              value={
+                exercise.targetWeight != null ? `${exercise.targetWeight} кг` : "—"
+              }
+            />
+          </dl>
         </div>
-
-        <div className="shrink-0 flex items-center gap-2.5">
-          <div className="text-right leading-none">
-            <div
-              className={cn(
-                "font-display text-[30px] leading-none tabular-nums",
-                isComplete
-                  ? "text-success"
-                  : hasProgress
-                    ? "text-accent"
-                    : "text-text-secondary",
-              )}
-            >
-              {loggedThisSession}
-            </div>
-            <div className="font-display text-[11px] text-text-secondary mt-1">
-              / {exercise.targetSets}
-              {exercise.targetReps ? ` × ${exercise.targetReps}` : ""} підх
-            </div>
-          </div>
-          <ChevronRight
-            size={16}
-            className="text-text-secondary/40 group-active:translate-x-0.5 transition-transform"
-          />
-        </div>
+        <ArrowRight
+          size={18}
+          className={cn(
+            "shrink-0 transition-transform group-active:translate-x-0.5",
+            isComplete
+              ? "text-success/70"
+              : hasProgress
+                ? "text-accent/70"
+                : "text-text-secondary/50",
+          )}
+        />
       </div>
     </button>
+  )
+}
+
+function Row({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-baseline gap-1.5">
+      <dt className="font-display text-[11px] uppercase tracking-[0.15em] text-text-secondary">
+        {label}
+      </dt>
+      <dd className="font-display text-[14px] text-text-primary tabular-nums">
+        {value}
+      </dd>
+    </div>
   )
 }

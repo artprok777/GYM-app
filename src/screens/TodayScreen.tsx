@@ -14,20 +14,17 @@ import { getTodaysWorkoutType } from "@/db/schedule"
 import {
   getOrStartTodaysSession,
   getSessionSetsForExercise,
-  getLastSetsForExercise,
 } from "@/db/sessions"
 import type {
   ExerciseTemplate,
   WorkoutType,
   WorkoutSession,
-  LoggedSet,
 } from "@/db/schema"
 import { ukDayName } from "@/lib/format"
 import { useSyncRefresh } from "@/hooks/useSyncRefresh"
 
 interface ExerciseState {
   exercise: ExerciseTemplate
-  lastSets: LoggedSet[]
   loggedThisSession: number
 }
 
@@ -60,11 +57,9 @@ export default function TodayScreen() {
     const exercises = await listExercises(selectedTypeId)
     const states: ExerciseState[] = []
     for (const ex of exercises) {
-      const lastSets = await getLastSetsForExercise(ex.name, s.id)
       const logged = await getSessionSetsForExercise(s.id, ex.name)
       states.push({
         exercise: ex,
-        lastSets,
         loggedThisSession: logged.length,
       })
     }
@@ -161,7 +156,6 @@ export default function TodayScreen() {
             <ExerciseCard
               key={item.exercise.id}
               exercise={item.exercise}
-              lastSets={item.lastSets}
               loggedThisSession={item.loggedThisSession}
               onClick={() => setOpenExercise(item.exercise)}
             />
