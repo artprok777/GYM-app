@@ -187,6 +187,7 @@ export default function TodayScreen() {
         <SetLoggerSheet
           exercise={openExercise}
           sessionId={session.id}
+          onSetLogged={loadSession}
           onClose={() => {
             setOpenExercise(null)
             loadSession()

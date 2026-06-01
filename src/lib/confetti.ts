@@ -1,6 +1,7 @@
 import confetti from "canvas-confetti"
 
 const COLORS = ["#F5A623", "#4ADE80", "#a786ff", "#fd8bbc", "#f8deb1"]
+const Z_INDEX = 9999
 
 export function fireSideCannons(durationMs = 2500): void {
   const end = Date.now() + durationMs
@@ -13,6 +14,7 @@ export function fireSideCannons(durationMs = 2500): void {
       startVelocity: 60,
       origin: { x: 0, y: 0.5 },
       colors: COLORS,
+      zIndex: Z_INDEX,
     })
     confetti({
       particleCount: 2,
@@ -21,6 +23,7 @@ export function fireSideCannons(durationMs = 2500): void {
       startVelocity: 60,
       origin: { x: 1, y: 0.5 },
       colors: COLORS,
+      zIndex: Z_INDEX,
     })
     requestAnimationFrame(frame)
   }
