@@ -14,16 +14,13 @@ import { getTodaysWorkoutType } from "@/db/schedule"
 import {
   getOrStartTodaysSession,
   getSessionSetsForExercise,
-  markSessionCelebrated,
 } from "@/db/sessions"
-import { db } from "@/db/client"
 import type {
   ExerciseTemplate,
   WorkoutType,
   WorkoutSession,
 } from "@/db/schema"
 import { ukDayName } from "@/lib/format"
-import { fireSideCannons } from "@/lib/confetti"
 import { useSyncRefresh } from "@/hooks/useSyncRefresh"
 
 interface ExerciseState {
@@ -80,47 +77,6 @@ export default function TodayScreen() {
     await loadTypes()
     await loadSession()
   }, [loadTypes, loadSession]))
-
-  const handleSetLogged = useCallback(async ({
-    sessionId,
-    workoutTypeId,
-    exerciseId,
-  }: {
-    sessionId: string
-    workoutTypeId: string
-    exerciseId: string
-  }) => {
-    const freshSession = await db.sessions.get(sessionId)
-    if (!freshSession || freshSession.celebratedAt != null) {
-      await loadSession()
-      return
-    }
-
-    const exercises = await listExercises(workoutTypeId)
-    if (exercises.length === 0) {
-      await loadSession()
-      return
-    }
-
-    const exercise = exercises.find((ex) => ex.id === exerciseId)
-    if (!exercise) {
-      await loadSession()
-      return
-    }
-
-    const sets = await getSessionSetsForExercise(freshSession.id, exercise.name)
-    if (sets.length < exercise.targetSets) {
-      await loadSession()
-      return
-    }
-
-    fireSideCannons()
-    await markSessionCelebrated(freshSession.id)
-    await loadSession()
-    setSession((s) =>
-      s?.id === freshSession.id ? { ...s, celebratedAt: Date.now() } : s,
-    )
-  }, [loadSession])
 
   const today = new Date().getDay()
   const selectedType = allTypes.find((t) => t.id === selectedTypeId)
@@ -216,7 +172,7 @@ export default function TodayScreen() {
         <SetLoggerSheet
           exercise={openExercise}
           sessionId={session.id}
-          onSetLogged={handleSetLogged}
+          onSetLogged={loadSession}
           onClose={() => {
             setOpenExercise(null)
             void loadSession()
