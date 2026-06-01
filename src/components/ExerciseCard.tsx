@@ -29,20 +29,13 @@ export function ExerciseCard({
     >
       <div className="flex items-center gap-4">
         <div className="flex-1 min-w-0 space-y-3">
-          <div className="flex items-center gap-2 min-w-0">
-            <div
-              className={cn(
-                "font-display font-medium text-[18px] leading-tight tracking-tight truncate",
-                isComplete ? "text-success" : "text-text-primary",
-              )}
-            >
-              {exercise.name}
-            </div>
-            {isComplete && (
-              <span className="inline-flex items-center gap-1 shrink-0 rounded-full bg-success/15 border border-success/40 px-2 py-0.5 font-display text-[10px] uppercase tracking-[0.12em] text-success">
-                <Check size={11} strokeWidth={3} /> Готово
-              </span>
+          <div
+            className={cn(
+              "font-display font-medium text-[18px] leading-tight tracking-tight truncate",
+              isComplete ? "text-success" : "text-text-primary",
             )}
+          >
+            {exercise.name}
           </div>
           <dl className="flex items-baseline gap-x-5 gap-y-1 flex-wrap">
             <Row label="Підходи" value={String(exercise.targetSets)} />

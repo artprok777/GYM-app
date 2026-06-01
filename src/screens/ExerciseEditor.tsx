@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { ChevronLeft, Plus, Trash2, GripVertical } from "lucide-react"
+import { ChevronLeft, Plus, Trash2, GripVertical, Pencil, Check } from "lucide-react"
 import {
   DndContext,
   PointerSensor,
@@ -32,7 +32,7 @@ import {
   updateExercise,
   reorderExercises,
 } from "@/db/exercises"
-import { listWorkoutTypes, listPrograms } from "@/db/programs"
+import { listWorkoutTypes, listPrograms, renameWorkoutType } from "@/db/programs"
 import type { ExerciseTemplate } from "@/db/schema"
 import { cn } from "@/lib/utils"
 import { useSyncRefresh } from "@/hooks/useSyncRefresh"
@@ -56,6 +56,8 @@ export function ExerciseEditor({
   const [draftWeight, setDraftWeight] = useState("")
   const [editingRepsId, setEditingRepsId] = useState<string | null>(null)
   const [draftReps, setDraftReps] = useState("")
+  const [editingTitle, setEditingTitle] = useState(false)
+  const [titleDraft, setTitleDraft] = useState("")
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -135,6 +137,16 @@ export function ExerciseEditor({
     await refresh()
   }
 
+  async function commitTitle() {
+    const trimmed = titleDraft.trim()
+    if (trimmed && trimmed !== workoutName) {
+      await renameWorkoutType(workoutTypeId, trimmed)
+    }
+    setEditingTitle(false)
+    setTitleDraft("")
+    await refresh()
+  }
+
   async function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event
     if (!over || active.id === over.id) return
@@ -162,9 +174,48 @@ export function ExerciseEditor({
         <p className="font-display text-[11px] uppercase tracking-[0.2em] text-text-secondary mb-1.5">
           Вправи
         </p>
-        <h1 className="font-display text-[28px] leading-none font-medium tracking-tight">
-          {workoutName || "Тренування"}
-        </h1>
+        {editingTitle ? (
+          <div className="flex items-center gap-2">
+            <Input
+              autoFocus
+              value={titleDraft}
+              onChange={(e) => setTitleDraft(e.target.value)}
+              onBlur={commitTitle}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") commitTitle()
+                if (e.key === "Escape") {
+                  setEditingTitle(false)
+                  setTitleDraft("")
+                }
+              }}
+              className="bg-bg border-border text-text-primary font-display text-[28px] h-12 flex-1"
+            />
+            <button
+              onClick={commitTitle}
+              className="p-2 text-accent hover:text-accent/80 min-h-[44px] min-w-[44px] flex items-center justify-center"
+              aria-label="Зберегти назву"
+            >
+              <Check size={20} />
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => {
+              setEditingTitle(true)
+              setTitleDraft(workoutName || "")
+            }}
+            className="group flex items-center gap-2 text-left min-h-[44px]"
+            aria-label="Перейменувати тренування"
+          >
+            <h1 className="font-display text-[28px] leading-none font-medium tracking-tight">
+              {workoutName || "Тренування"}
+            </h1>
+            <Pencil
+              size={15}
+              className="text-text-secondary group-hover:text-accent transition-colors"
+            />
+          </button>
+        )}
       </div>
 
       <div className="space-y-2">

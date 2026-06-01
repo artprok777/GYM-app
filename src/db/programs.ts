@@ -16,13 +16,6 @@ export async function listPrograms(): Promise<Program[]> {
   return rows.filter((p) => p.deletedAt == null)
 }
 
-export async function renameProgram(id: string, name: string): Promise<void> {
-  const patch = { name, updatedAt: Date.now() }
-  await db.programs.update(id, patch)
-  const row = await db.programs.get(id)
-  if (row) await enqueue("upsert", "programs", id, row)
-}
-
 export async function listWorkoutTypes(programId: string): Promise<WorkoutType[]> {
   const rows = await db.workoutTypes
     .where("programId")
