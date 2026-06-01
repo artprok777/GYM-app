@@ -81,28 +81,40 @@ export default function TodayScreen() {
     await loadSession()
   }, [loadTypes, loadSession]))
 
-  const handleSetLogged = useCallback(async () => {
-    const sessionId = session?.id
-    await loadSession()
-    if (!selectedTypeId || !sessionId) return
-
+  const handleSetLogged = useCallback(async ({
+    sessionId,
+    workoutTypeId,
+  }: {
+    sessionId: string
+    workoutTypeId: string
+  }) => {
     const freshSession = await db.sessions.get(sessionId)
-    if (!freshSession || freshSession.celebratedAt != null) return
+    if (!freshSession || freshSession.celebratedAt != null) {
+      await loadSession()
+      return
+    }
 
-    const exercises = await listExercises(selectedTypeId)
-    if (exercises.length === 0) return
+    const exercises = await listExercises(workoutTypeId)
+    if (exercises.length === 0) {
+      await loadSession()
+      return
+    }
 
     for (const ex of exercises) {
       const sets = await getSessionSetsForExercise(freshSession.id, ex.name)
-      if (sets.length < ex.targetSets) return
+      if (sets.length < ex.targetSets) {
+        await loadSession()
+        return
+      }
     }
 
-    fireSideCannons()
     await markSessionCelebrated(freshSession.id)
+    fireSideCannons()
+    await loadSession()
     setSession((s) =>
       s?.id === freshSession.id ? { ...s, celebratedAt: Date.now() } : s,
     )
-  }, [loadSession, selectedTypeId, session?.id])
+  }, [loadSession])
 
   const today = new Date().getDay()
   const selectedType = allTypes.find((t) => t.id === selectedTypeId)

@@ -16,6 +16,11 @@ import { useBodyScrollLock } from "@/hooks/useBodyScrollLock"
 
 const WEIGHT_VALUES = Array.from({ length: 401 }, (_, i) => Math.round(i * 5) / 10)
 
+interface SetLoggedEvent {
+  sessionId: string
+  workoutTypeId: string
+}
+
 function snapWeight(v: number): number {
   return Math.round(v * 2) / 2
 }
@@ -29,7 +34,7 @@ export function SetLoggerSheet({
   exercise: ExerciseTemplate
   sessionId: string
   onClose: () => void
-  onSetLogged?: () => void
+  onSetLogged?: (event: SetLoggedEvent) => void | Promise<void>
 }) {
   const [lastSets, setLastSets] = useState<LoggedSet[]>([])
   const [loggedSets, setLoggedSets] = useState<LoggedSet[]>([])
@@ -105,13 +110,13 @@ export function SetLoggerSheet({
     setTimeout(() => setFlashIds(new Set()), 500)
     setSetsCount(1)
     await refresh()
-    onSetLogged?.()
+    await onSetLogged?.({ sessionId, workoutTypeId: exercise.workoutTypeId })
   }
 
   async function handleRemove(id: string) {
     await deleteSet(id)
     await refresh()
-    onSetLogged?.()
+    await onSetLogged?.({ sessionId, workoutTypeId: exercise.workoutTypeId })
   }
 
   function startEditSet(s: LoggedSet) {
