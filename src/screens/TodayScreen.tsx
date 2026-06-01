@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { ChevronDown, Dumbbell } from "lucide-react"
 import {
   DropdownMenu,
@@ -80,28 +80,30 @@ export default function TodayScreen() {
     await loadSession()
   }, [loadTypes, loadSession]))
 
+  const seenSessionsRef = useRef<Set<string>>(new Set())
+
   useEffect(() => {
-    console.log("[celebrate] check", {
-      session: session?.id,
-      celebratedAt: session?.celebratedAt,
-      itemsCount: items.length,
-      progress: items.map(
-        (i) => `${i.exercise.name}=${i.loggedThisSession}/${i.exercise.targetSets}`,
-      ),
-    })
     if (!session || items.length === 0) return
-    if (session.celebratedAt != null) {
-      console.log("[celebrate] skip: already celebrated")
-      return
-    }
+
+    const firstSeen = !seenSessionsRef.current.has(session.id)
+    seenSessionsRef.current.add(session.id)
+
+    if (session.celebratedAt != null) return
     const allDone = items.every(
       (i) => i.loggedThisSession >= i.exercise.targetSets,
     )
-    if (!allDone) {
-      console.log("[celebrate] skip: not all done")
+    if (!allDone) return
+
+    if (firstSeen) {
+      // Сесія була завершена до того, як ми її вперше побачили —
+      // тихо проставляємо прапорець, без анімації.
+      void markSessionCelebrated(session.id).then(() =>
+        setSession((s) => (s ? { ...s, celebratedAt: Date.now() } : s)),
+      )
       return
     }
-    console.log("[celebrate] ALL DONE — firing confetti")
+
+    // Бачили цю сесію в незавершеному стані — це момент переходу.
     fireSideCannons()
     void markSessionCelebrated(session.id).then(() =>
       setSession((s) => (s ? { ...s, celebratedAt: Date.now() } : s)),

@@ -9,7 +9,6 @@ if (typeof window !== "undefined") {
 }
 
 export function fireSideCannons(durationMs = 2500): void {
-  console.log("[confetti] firing side cannons for", durationMs, "ms")
   const end = Date.now() + durationMs
   const frame = () => {
     if (Date.now() > end) return
