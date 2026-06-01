@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { Plus, Pencil, Trash2, ChevronRight, LayoutGrid, GripVertical } from "lucide-react"
+import { Plus, Pencil, Trash2, ChevronRight, LayoutGrid, GripVertical, Check } from "lucide-react"
 import {
   DndContext,
   PointerSensor,
@@ -23,6 +23,7 @@ import {
   createProgram,
   listWorkoutTypes,
   renameWorkoutType,
+  renameProgram,
   deleteWorkoutType,
   reorderWorkoutTypes,
 } from "@/db/programs"
@@ -41,6 +42,8 @@ export function ProgramEditor({
   const [editingId, setEditingId] = useState<string | null>(null)
   const [draftName, setDraftName] = useState("")
   const [showCreateSheet, setShowCreateSheet] = useState(false)
+  const [editingProgram, setEditingProgram] = useState(false)
+  const [programDraft, setProgramDraft] = useState("")
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -82,6 +85,17 @@ export function ProgramEditor({
     await refresh()
   }
 
+  async function commitProgramName() {
+    if (!program) return
+    const trimmed = programDraft.trim()
+    if (trimmed && trimmed !== program.name) {
+      await renameProgram(program.id, trimmed)
+    }
+    setEditingProgram(false)
+    setProgramDraft("")
+    await refresh()
+  }
+
   async function handleDragEnd(event: DragEndEvent) {
     if (!program) return
     const { active, over } = event
@@ -101,11 +115,50 @@ export function ProgramEditor({
     <section className="space-y-4">
       <div>
         <p className="font-display text-[11px] uppercase tracking-[0.2em] text-text-secondary mb-1.5">
-          Тренування
+          Програма
         </p>
-        <h2 className="font-display text-xl text-text-primary">
-          Створи блоки A, B, C
-        </h2>
+        {editingProgram ? (
+          <div className="flex items-center gap-2">
+            <Input
+              autoFocus
+              value={programDraft}
+              onChange={(e) => setProgramDraft(e.target.value)}
+              onBlur={commitProgramName}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") commitProgramName()
+                if (e.key === "Escape") {
+                  setEditingProgram(false)
+                  setProgramDraft("")
+                }
+              }}
+              className="bg-bg border-border text-text-primary font-display text-xl h-11 flex-1"
+            />
+            <button
+              onClick={commitProgramName}
+              className="p-2 text-accent hover:text-accent/80 min-h-[44px] min-w-[44px] flex items-center justify-center"
+              aria-label="Зберегти назву"
+            >
+              <Check size={18} />
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => {
+              if (!program) return
+              setEditingProgram(true)
+              setProgramDraft(program.name)
+            }}
+            className="group flex items-center gap-2 text-left min-h-[44px]"
+          >
+            <h2 className="font-display text-xl text-text-primary">
+              {program?.name ?? "Програма"}
+            </h2>
+            <Pencil
+              size={14}
+              className="text-text-secondary group-hover:text-accent transition-colors"
+            />
+          </button>
+        )}
       </div>
 
       {types.length === 0 ? (

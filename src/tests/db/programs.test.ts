@@ -6,6 +6,7 @@ import {
   listWorkoutTypes,
   addWorkoutType,
   renameWorkoutType,
+  renameProgram,
   deleteWorkoutType,
 } from "@/db/programs"
 
@@ -32,6 +33,14 @@ describe("programs db", () => {
     expect(types.map((t) => t.name)).toEqual(["Тренування A", "Тренування B"])
     expect(types[0].order).toBe(0)
     expect(types[1].order).toBe(1)
+  })
+
+  it("renames a program", async () => {
+    const program = await createProgram("Old name")
+    await renameProgram(program.id, "New name")
+    const all = await listPrograms()
+    expect(all[0].name).toBe("New name")
+    expect(all[0].updatedAt).toBeGreaterThanOrEqual(program.updatedAt)
   })
 
   it("renames a workout type", async () => {
