@@ -84,9 +84,11 @@ export default function TodayScreen() {
   const handleSetLogged = useCallback(async ({
     sessionId,
     workoutTypeId,
+    exerciseId,
   }: {
     sessionId: string
     workoutTypeId: string
+    exerciseId: string
   }) => {
     const freshSession = await db.sessions.get(sessionId)
     if (!freshSession || freshSession.celebratedAt != null) {
@@ -100,12 +102,16 @@ export default function TodayScreen() {
       return
     }
 
-    for (const ex of exercises) {
-      const sets = await getSessionSetsForExercise(freshSession.id, ex.name)
-      if (sets.length < ex.targetSets) {
-        await loadSession()
-        return
-      }
+    const exercise = exercises.find((ex) => ex.id === exerciseId)
+    if (!exercise) {
+      await loadSession()
+      return
+    }
+
+    const sets = await getSessionSetsForExercise(freshSession.id, exercise.name)
+    if (sets.length < exercise.targetSets) {
+      await loadSession()
+      return
     }
 
     fireSideCannons()

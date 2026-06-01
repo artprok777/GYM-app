@@ -19,6 +19,7 @@ const WEIGHT_VALUES = Array.from({ length: 401 }, (_, i) => Math.round(i * 5) / 
 interface SetLoggedEvent {
   sessionId: string
   workoutTypeId: string
+  exerciseId: string
 }
 
 function snapWeight(v: number): number {
@@ -110,13 +111,21 @@ export function SetLoggerSheet({
     setTimeout(() => setFlashIds(new Set()), 500)
     setSetsCount(1)
     await refresh()
-    await onSetLogged?.({ sessionId, workoutTypeId: exercise.workoutTypeId })
+    await onSetLogged?.({
+      sessionId,
+      workoutTypeId: exercise.workoutTypeId,
+      exerciseId: exercise.id,
+    })
   }
 
   async function handleRemove(id: string) {
     await deleteSet(id)
     await refresh()
-    await onSetLogged?.({ sessionId, workoutTypeId: exercise.workoutTypeId })
+    await onSetLogged?.({
+      sessionId,
+      workoutTypeId: exercise.workoutTypeId,
+      exerciseId: exercise.id,
+    })
   }
 
   function startEditSet(s: LoggedSet) {
