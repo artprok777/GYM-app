@@ -1,16 +1,27 @@
 import { useState } from "react"
 import { ProgramEditor } from "./ProgramEditor"
 import { ExerciseEditor } from "./ExerciseEditor"
-import { ScheduleEditor } from "./ScheduleEditor"
+import { ExerciseDetail } from "./ExerciseDetail"
 
 export default function ProgramScreen() {
   const [selectedWorkoutType, setSelectedWorkoutType] = useState<string | null>(null)
+  const [selectedExercise, setSelectedExercise] = useState<string | null>(null)
+
+  if (selectedExercise) {
+    return (
+      <ExerciseDetail
+        exerciseId={selectedExercise}
+        onBack={() => setSelectedExercise(null)}
+      />
+    )
+  }
 
   if (selectedWorkoutType) {
     return (
       <ExerciseEditor
         workoutTypeId={selectedWorkoutType}
         onBack={() => setSelectedWorkoutType(null)}
+        onSelectExercise={setSelectedExercise}
       />
     )
   }
@@ -27,7 +38,6 @@ export default function ProgramScreen() {
       </div>
 
       <ProgramEditor onSelectWorkoutType={setSelectedWorkoutType} />
-      <ScheduleEditor />
     </div>
   )
 }

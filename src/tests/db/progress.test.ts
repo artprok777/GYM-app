@@ -3,6 +3,7 @@ import { db } from "@/db/client"
 import { startSession, logSet } from "@/db/sessions"
 import {
   getExerciseHistory,
+  getExerciseSessionHistory,
   getPersonalRecord,
   getWorkoutProgress,
   getSessionsByWeek,
@@ -75,6 +76,25 @@ describe("progress queries", () => {
     expect(weeks.length).toBeGreaterThanOrEqual(2)
     const firstWeek = weeks.find((w) => w.count === 2)
     expect(firstWeek).toBeTruthy()
+  })
+
+  it("returns exercise session history sorted newest first with full sets", async () => {
+    const s1 = await startSession("wt-1")
+    await db.sessions.update(s1.id, { date: 1000 })
+    await logSet(s1.id, "Squat", 80, 5, 1)
+    await logSet(s1.id, "Squat", 80, 5, 2)
+
+    const s2 = await startSession("wt-1")
+    await db.sessions.update(s2.id, { date: 2000 })
+    await logSet(s2.id, "Squat", 85, 5, 1)
+    await logSet(s2.id, "Squat", 90, 3, 2)
+
+    const history = await getExerciseSessionHistory("Squat")
+    expect(history).toHaveLength(2)
+    expect(history[0].date).toBe(2000)
+    expect(history[0].sets.map((s) => s.weight)).toEqual([85, 90])
+    expect(history[1].date).toBe(1000)
+    expect(history[1].sets).toHaveLength(2)
   })
 
   it("returns session dates for a workout type", async () => {

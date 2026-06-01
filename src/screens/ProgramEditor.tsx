@@ -99,14 +99,9 @@ export function ProgramEditor({
 
   return (
     <section className="space-y-4">
-      <div>
-        <p className="font-display text-[11px] uppercase tracking-[0.2em] text-text-secondary mb-1.5">
-          Тренування
-        </p>
-        <h2 className="font-display text-xl text-text-primary">
-          Створи блоки A, B, C
-        </h2>
-      </div>
+      <p className="font-display text-[11px] uppercase tracking-[0.2em] text-text-secondary">
+        Тренування
+      </p>
 
       {types.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border p-6 text-center space-y-2">

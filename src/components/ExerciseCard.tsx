@@ -1,4 +1,4 @@
-import { ArrowRight } from "lucide-react"
+import { ArrowRight, Check } from "lucide-react"
 import type { ExerciseTemplate } from "@/db/schema"
 import { cn } from "@/lib/utils"
 
@@ -21,15 +21,20 @@ export function ExerciseCard({
         "group w-full text-left rounded-xl border px-5 py-4",
         "transition-all active:scale-[0.985]",
         isComplete
-          ? "bg-success/[0.05] border-success/25"
+          ? "bg-success/[0.12] border-success/60 shadow-[inset_0_0_0_1px_rgba(74,222,128,0.15)]"
           : hasProgress
-            ? "bg-accent/[0.06] border-accent/25"
+            ? "bg-accent/[0.10] border-accent/45"
             : "bg-surface border-border",
       )}
     >
       <div className="flex items-center gap-4">
         <div className="flex-1 min-w-0 space-y-3">
-          <div className="font-display font-medium text-text-primary text-[18px] leading-tight tracking-tight truncate">
+          <div
+            className={cn(
+              "font-display font-medium text-[18px] leading-tight tracking-tight truncate",
+              isComplete ? "text-success" : "text-text-primary",
+            )}
+          >
             {exercise.name}
           </div>
           <dl className="flex items-baseline gap-x-5 gap-y-1 flex-wrap">
@@ -46,17 +51,19 @@ export function ExerciseCard({
             />
           </dl>
         </div>
-        <ArrowRight
-          size={18}
-          className={cn(
-            "shrink-0 transition-transform group-active:translate-x-0.5",
-            isComplete
-              ? "text-success/70"
-              : hasProgress
-                ? "text-accent/70"
-                : "text-text-secondary/50",
-          )}
-        />
+        {isComplete ? (
+          <div className="shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-success/20 border border-success/50">
+            <Check size={16} strokeWidth={2.5} className="text-success" />
+          </div>
+        ) : (
+          <ArrowRight
+            size={18}
+            className={cn(
+              "shrink-0 transition-transform group-active:translate-x-0.5",
+              hasProgress ? "text-accent/80" : "text-text-secondary/50",
+            )}
+          />
+        )}
       </div>
     </button>
   )
