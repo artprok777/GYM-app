@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { ChevronDown, Dumbbell } from "lucide-react"
 import {
   DropdownMenu,
@@ -16,6 +16,7 @@ import {
   getSessionSetsForExercise,
   markSessionCelebrated,
 } from "@/db/sessions"
+import { db } from "@/db/client"
 import type {
   ExerciseTemplate,
   WorkoutType,
@@ -80,35 +81,28 @@ export default function TodayScreen() {
     await loadSession()
   }, [loadTypes, loadSession]))
 
-  const seenSessionsRef = useRef<Set<string>>(new Set())
+  const handleSetLogged = useCallback(async () => {
+    const sessionId = session?.id
+    await loadSession()
+    if (!selectedTypeId || !sessionId) return
 
-  useEffect(() => {
-    if (!session || items.length === 0) return
+    const freshSession = await db.sessions.get(sessionId)
+    if (!freshSession || freshSession.celebratedAt != null) return
 
-    const firstSeen = !seenSessionsRef.current.has(session.id)
-    seenSessionsRef.current.add(session.id)
+    const exercises = await listExercises(selectedTypeId)
+    if (exercises.length === 0) return
 
-    if (session.celebratedAt != null) return
-    const allDone = items.every(
-      (i) => i.loggedThisSession >= i.exercise.targetSets,
-    )
-    if (!allDone) return
-
-    if (firstSeen) {
-      // Сесія була завершена до того, як ми її вперше побачили —
-      // тихо проставляємо прапорець, без анімації.
-      void markSessionCelebrated(session.id).then(() =>
-        setSession((s) => (s ? { ...s, celebratedAt: Date.now() } : s)),
-      )
-      return
+    for (const ex of exercises) {
+      const sets = await getSessionSetsForExercise(freshSession.id, ex.name)
+      if (sets.length < ex.targetSets) return
     }
 
-    // Бачили цю сесію в незавершеному стані — це момент переходу.
     fireSideCannons()
-    void markSessionCelebrated(session.id).then(() =>
-      setSession((s) => (s ? { ...s, celebratedAt: Date.now() } : s)),
+    await markSessionCelebrated(freshSession.id)
+    setSession((s) =>
+      s?.id === freshSession.id ? { ...s, celebratedAt: Date.now() } : s,
     )
-  }, [session, items])
+  }, [loadSession, selectedTypeId, session?.id])
 
   const today = new Date().getDay()
   const selectedType = allTypes.find((t) => t.id === selectedTypeId)
@@ -204,10 +198,10 @@ export default function TodayScreen() {
         <SetLoggerSheet
           exercise={openExercise}
           sessionId={session.id}
-          onSetLogged={loadSession}
+          onSetLogged={handleSetLogged}
           onClose={() => {
             setOpenExercise(null)
-            loadSession()
+            void loadSession()
           }}
         />
       )}
