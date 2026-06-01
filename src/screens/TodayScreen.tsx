@@ -108,8 +108,8 @@ export default function TodayScreen() {
       }
     }
 
-    await markSessionCelebrated(freshSession.id)
     fireSideCannons()
+    await markSessionCelebrated(freshSession.id)
     await loadSession()
     setSession((s) =>
       s?.id === freshSession.id ? { ...s, celebratedAt: Date.now() } : s,
