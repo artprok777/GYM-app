@@ -3,7 +3,13 @@ import confetti from "canvas-confetti"
 const COLORS = ["#F5A623", "#4ADE80", "#a786ff", "#fd8bbc", "#f8deb1"]
 const Z_INDEX = 9999
 
+if (typeof window !== "undefined") {
+  ;(window as unknown as { gymConfetti: () => void }).gymConfetti = () =>
+    fireSideCannons()
+}
+
 export function fireSideCannons(durationMs = 2500): void {
+  console.log("[confetti] firing side cannons for", durationMs, "ms")
   const end = Date.now() + durationMs
   const frame = () => {
     if (Date.now() > end) return

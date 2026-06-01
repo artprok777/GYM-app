@@ -81,12 +81,27 @@ export default function TodayScreen() {
   }, [loadTypes, loadSession]))
 
   useEffect(() => {
+    console.log("[celebrate] check", {
+      session: session?.id,
+      celebratedAt: session?.celebratedAt,
+      itemsCount: items.length,
+      progress: items.map(
+        (i) => `${i.exercise.name}=${i.loggedThisSession}/${i.exercise.targetSets}`,
+      ),
+    })
     if (!session || items.length === 0) return
-    if (session.celebratedAt != null) return
+    if (session.celebratedAt != null) {
+      console.log("[celebrate] skip: already celebrated")
+      return
+    }
     const allDone = items.every(
       (i) => i.loggedThisSession >= i.exercise.targetSets,
     )
-    if (!allDone) return
+    if (!allDone) {
+      console.log("[celebrate] skip: not all done")
+      return
+    }
+    console.log("[celebrate] ALL DONE — firing confetti")
     fireSideCannons()
     void markSessionCelebrated(session.id).then(() =>
       setSession((s) => (s ? { ...s, celebratedAt: Date.now() } : s)),
