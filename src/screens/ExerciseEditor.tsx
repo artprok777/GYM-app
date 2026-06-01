@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { ChevronLeft, Plus, GripVertical, Pencil, Check, ArrowRight } from "lucide-react"
 import {
   DndContext,
@@ -58,18 +58,18 @@ export function ExerciseEditor({
     useSensor(TouchSensor, { activationConstraint: { delay: 180, tolerance: 6 } }),
   )
 
-  async function refresh() {
+  const refresh = useCallback(async () => {
     setExercises(await listExercises(workoutTypeId))
     const programs = await listPrograms()
     if (programs[0]) {
       const types = await listWorkoutTypes(programs[0].id)
       setWorkoutName(types.find((t) => t.id === workoutTypeId)?.name ?? "")
     }
-  }
+  }, [workoutTypeId])
 
   useEffect(() => {
-    refresh()
-  }, [workoutTypeId])
+    void refresh()
+  }, [refresh])
 
   useSyncRefresh(refresh)
 

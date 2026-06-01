@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { Plus, Pencil, Trash2, ChevronRight, LayoutGrid, GripVertical } from "lucide-react"
 import {
   DndContext,
@@ -47,17 +47,17 @@ export function ProgramEditor({
     useSensor(TouchSensor, { activationConstraint: { delay: 180, tolerance: 6 } }),
   )
 
-  async function refresh() {
+  const refresh = useCallback(async () => {
     const programs = await listPrograms()
     let p = programs[0]
     if (!p) p = await createProgram("Моя програма")
     setProgram(p)
     setTypes(await listWorkoutTypes(p.id))
-  }
+  }, [])
 
   useEffect(() => {
-    refresh()
-  }, [])
+    void refresh()
+  }, [refresh])
 
   useSyncRefresh(refresh)
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { motion, AnimatePresence, useDragControls } from "framer-motion"
 import { X, Check, Plus, Minus, Pencil } from "lucide-react"
 import {
@@ -38,28 +38,30 @@ export function SetLoggerSheet({
   const [editingSetId, setEditingSetId] = useState<string | null>(null)
   const [editWeight, setEditWeight] = useState("")
   const [editReps, setEditReps] = useState("")
+  const seededRef = useRef(false)
   const [sessionTargetReps, setSessionTargetReps] = useState<number | null>(
     exercise.targetReps ?? null,
   )
   const [editingTargetReps, setEditingTargetReps] = useState(false)
   const [draftTargetReps, setDraftTargetReps] = useState("")
 
-  async function refresh() {
+  const refresh = useCallback(async () => {
     const last = await getLastSetsForExercise(exercise.name, sessionId)
     const logged = await getSessionSetsForExercise(sessionId, exercise.name)
     setLastSets(last)
     setLoggedSets(logged)
 
-    if (!seeded) {
+    if (!seededRef.current) {
       const seed = logged[logged.length - 1] ?? last[last.length - 1]
       if (seed) {
         setWeight(snapWeight(seed.weight))
       } else if (exercise.targetWeight) {
         setWeight(snapWeight(exercise.targetWeight))
       }
+      seededRef.current = true
       setSeeded(true)
     }
-  }
+  }, [exercise.name, exercise.targetWeight, sessionId])
 
   function commitTargetReps() {
     const raw = draftTargetReps.trim()
@@ -74,8 +76,8 @@ export function SetLoggerSheet({
   }
 
   useEffect(() => {
-    refresh()
-  }, [])
+    void refresh()
+  }, [refresh])
 
   function bumpSets(delta: number) {
     setSetsCount((c) => Math.max(1, c + delta))

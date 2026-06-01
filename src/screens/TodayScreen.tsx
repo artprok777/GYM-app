@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { ChevronDown, Dumbbell } from "lucide-react"
 import {
   DropdownMenu,
@@ -35,7 +35,7 @@ export default function TodayScreen() {
   const [items, setItems] = useState<ExerciseState[]>([])
   const [openExercise, setOpenExercise] = useState<ExerciseTemplate | null>(null)
 
-  async function loadTypes() {
+  const loadTypes = useCallback(async () => {
     const programs = await listPrograms()
     if (!programs[0]) return
     const types = await listWorkoutTypes(programs[0].id)
@@ -44,9 +44,9 @@ export default function TodayScreen() {
       const scheduledId = await getTodaysWorkoutType()
       setSelectedTypeId(scheduledId ?? types[0]?.id ?? null)
     }
-  }
+  }, [selectedTypeId])
 
-  async function loadSession() {
+  const loadSession = useCallback(async () => {
     if (!selectedTypeId) {
       setSession(null)
       setItems([])
@@ -55,29 +55,28 @@ export default function TodayScreen() {
     const s = await getOrStartTodaysSession(selectedTypeId)
     setSession(s)
     const exercises = await listExercises(selectedTypeId)
-    const states: ExerciseState[] = []
-    for (const ex of exercises) {
+    const states: ExerciseState[] = await Promise.all(exercises.map(async (ex) => {
       const logged = await getSessionSetsForExercise(s.id, ex.name)
-      states.push({
+      return {
         exercise: ex,
         loggedThisSession: logged.length,
-      })
-    }
+      }
+    }))
     setItems(states)
-  }
-
-  useEffect(() => {
-    loadTypes()
-  }, [])
-
-  useEffect(() => {
-    loadSession()
   }, [selectedTypeId])
 
-  useSyncRefresh(async () => {
+  useEffect(() => {
+    void loadTypes()
+  }, [loadTypes])
+
+  useEffect(() => {
+    void loadSession()
+  }, [loadSession])
+
+  useSyncRefresh(useCallback(async () => {
     await loadTypes()
     await loadSession()
-  })
+  }, [loadTypes, loadSession]))
 
   const today = new Date().getDay()
   const selectedType = allTypes.find((t) => t.id === selectedTypeId)

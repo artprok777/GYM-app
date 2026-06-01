@@ -105,22 +105,32 @@ export async function getWorkoutProgress(
   workoutTypeId: string,
   exerciseNames: string[],
 ): Promise<WorkoutExerciseProgress[]> {
+  if (exerciseNames.length === 0) return []
+
   const sessions = (
     await db.sessions.where("workoutTypeId").equals(workoutTypeId).sortBy("date")
   ).filter((s) => s.deletedAt == null)
   const sessionIds = new Set(sessions.map((s) => s.id))
   const sessionDateById = new Map(sessions.map((s) => [s.id, s.date]))
+  const setsByExercise = new Map<string, LoggedSet[]>()
+  const sets = (
+    await db.loggedSets.where("exerciseName").anyOf(exerciseNames).toArray()
+  ).filter((s) => sessionIds.has(s.sessionId) && s.deletedAt == null)
+
+  for (const set of sets) {
+    const group = setsByExercise.get(set.exerciseName) ?? []
+    group.push(set)
+    setsByExercise.set(set.exerciseName, group)
+  }
 
   const results: WorkoutExerciseProgress[] = []
   for (const name of exerciseNames) {
-    const sets = (
-      await db.loggedSets.where("exerciseName").equals(name).toArray()
-    ).filter((s) => sessionIds.has(s.sessionId) && s.deletedAt == null)
+    const exerciseSets = setsByExercise.get(name) ?? []
 
-    if (sets.length === 0) continue
+    if (exerciseSets.length === 0) continue
 
     const byDate = new Map<number, number>()
-    for (const s of sets) {
+    for (const s of exerciseSets) {
       const d = sessionDateById.get(s.sessionId)!
       byDate.set(d, Math.max(byDate.get(d) ?? 0, s.weight))
     }

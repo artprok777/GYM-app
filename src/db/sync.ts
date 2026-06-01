@@ -175,7 +175,9 @@ export async function pushQueue(): Promise<void> {
       try {
         await pushEntry(entry)
         await db.syncQueue.update(entry.id, { syncedAt: Date.now() })
-        console.log("[sync] pushed", entry.op, entry.table, entry.recordId)
+        if (import.meta.env.DEV) {
+          console.log("[sync] pushed", entry.op, entry.table, entry.recordId)
+        }
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)
         console.error("[sync] push failed", entry.op, entry.table, entry.recordId, msg, err)
@@ -195,6 +197,7 @@ export async function pullChanges(): Promise<void> {
   const since = localStorage.getItem(LAST_PULLED_KEY) ?? "1970-01-01T00:00:00Z"
   const startedAt = new Date().toISOString()
   let anyChanged = false
+  let hadError = false
   for (const local of Object.keys(TABLE_TO_REMOTE) as SyncTable[]) {
     const remote = TABLE_TO_REMOTE[local]
     const { data, error } = await supabase
@@ -203,6 +206,7 @@ export async function pullChanges(): Promise<void> {
       .eq("user_id", USER_ID)
       .gt("updated_at", since)
     if (error) {
+      hadError = true
       console.error("[sync] pull error", remote, error)
       continue
     }
@@ -211,7 +215,7 @@ export async function pullChanges(): Promise<void> {
       if (changed) anyChanged = true
     }
   }
-  localStorage.setItem(LAST_PULLED_KEY, startedAt)
+  if (!hadError) localStorage.setItem(LAST_PULLED_KEY, startedAt)
   if (anyChanged) emitSyncChanged()
 }
 
@@ -243,8 +247,10 @@ async function bootstrapInitialUpload(): Promise<void> {
 }
 
 export async function bootstrap(): Promise<void> {
-  console.log("[sync] cloudEnabled =", cloudEnabled, "USER_ID =", USER_ID || "(empty)")
-  if (typeof window !== "undefined") {
+  if (import.meta.env.DEV) {
+    console.log("[sync] cloudEnabled =", cloudEnabled, "USER_ID =", USER_ID || "(empty)")
+  }
+  if (import.meta.env.DEV && typeof window !== "undefined") {
     ;(window as unknown as { gymSync: unknown }).gymSync = {
       pushQueue,
       pullChanges,
@@ -259,7 +265,9 @@ export async function bootstrap(): Promise<void> {
     }
   }
   if (!cloudEnabled) {
-    console.warn("[sync] cloud disabled — VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY / VITE_USER_ID env vars missing")
+    if (import.meta.env.DEV) {
+      console.warn("[sync] cloud disabled — VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY / VITE_USER_ID env vars missing")
+    }
     return
   }
   await bootstrapInitialUpload()
