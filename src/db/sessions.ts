@@ -108,6 +108,16 @@ export async function updateSet(
   if (row) await enqueue("upsert", "loggedSets", id, row)
 }
 
+export async function markSessionCelebrated(sessionId: string): Promise<void> {
+  const now = Date.now()
+  await db.sessions.update(sessionId, {
+    celebratedAt: now,
+    updatedAt: now,
+  })
+  const row = await db.sessions.get(sessionId)
+  if (row) await enqueue("upsert", "sessions", sessionId, row)
+}
+
 export async function deleteSet(id: string): Promise<void> {
   const now = Date.now()
   await db.loggedSets.update(id, { deletedAt: now, updatedAt: now })

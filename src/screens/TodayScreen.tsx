@@ -14,6 +14,7 @@ import { getTodaysWorkoutType } from "@/db/schedule"
 import {
   getOrStartTodaysSession,
   getSessionSetsForExercise,
+  markSessionCelebrated,
 } from "@/db/sessions"
 import type {
   ExerciseTemplate,
@@ -21,6 +22,7 @@ import type {
   WorkoutSession,
 } from "@/db/schema"
 import { ukDayName } from "@/lib/format"
+import { fireSideCannons } from "@/lib/confetti"
 import { useSyncRefresh } from "@/hooks/useSyncRefresh"
 
 interface ExerciseState {
@@ -77,6 +79,19 @@ export default function TodayScreen() {
     await loadTypes()
     await loadSession()
   }, [loadTypes, loadSession]))
+
+  useEffect(() => {
+    if (!session || items.length === 0) return
+    if (session.celebratedAt != null) return
+    const allDone = items.every(
+      (i) => i.loggedThisSession >= i.exercise.targetSets,
+    )
+    if (!allDone) return
+    fireSideCannons()
+    void markSessionCelebrated(session.id).then(() =>
+      setSession((s) => (s ? { ...s, celebratedAt: Date.now() } : s)),
+    )
+  }, [session, items])
 
   const today = new Date().getDay()
   const selectedType = allTypes.find((t) => t.id === selectedTypeId)

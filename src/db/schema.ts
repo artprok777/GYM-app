@@ -38,6 +38,7 @@ export interface WorkoutSession extends Syncable {
   date: number // start of day, unix ms
   workoutTypeId: string
   notes?: string
+  celebratedAt?: number // unix ms — when all-done confetti has been shown
 }
 
 export interface LoggedSet extends Syncable {
