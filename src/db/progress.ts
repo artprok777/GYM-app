@@ -46,6 +46,43 @@ export async function getExerciseHistory(
   return points.sort((a, b) => a.date - b.date)
 }
 
+export interface ExerciseSessionEntry {
+  sessionId: string
+  date: number
+  sets: LoggedSet[]
+}
+
+export async function getExerciseSessionHistory(
+  exerciseName: string,
+): Promise<ExerciseSessionEntry[]> {
+  const allSets = (
+    await db.loggedSets.where("exerciseName").equals(exerciseName).toArray()
+  ).filter((s) => s.deletedAt == null)
+  const sessions = (await db.sessions.toArray()).filter(
+    (s) => s.deletedAt == null,
+  )
+  const sessionById = new Map(sessions.map((s) => [s.id, s]))
+
+  const bySession = new Map<string, LoggedSet[]>()
+  for (const s of allSets) {
+    const arr = bySession.get(s.sessionId) ?? []
+    arr.push(s)
+    bySession.set(s.sessionId, arr)
+  }
+
+  const entries: ExerciseSessionEntry[] = []
+  for (const [sessionId, sets] of bySession) {
+    const session = sessionById.get(sessionId)
+    if (!session) continue
+    entries.push({
+      sessionId,
+      date: session.date,
+      sets: sets.sort((a, b) => a.setNumber - b.setNumber),
+    })
+  }
+  return entries.sort((a, b) => b.date - a.date)
+}
+
 export async function getPersonalRecord(
   exerciseName: string,
 ): Promise<number | null> {

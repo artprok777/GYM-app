@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { ChevronLeft, Plus, Trash2, GripVertical, Pencil, Check } from "lucide-react"
+import { ChevronLeft, Plus, GripVertical, Pencil, Check, ArrowRight } from "lucide-react"
 import {
   DndContext,
   PointerSensor,
@@ -28,8 +28,6 @@ import {
 import {
   listExercises,
   addExercise,
-  deleteExercise,
-  updateExercise,
   reorderExercises,
 } from "@/db/exercises"
 import { listWorkoutTypes, listPrograms, renameWorkoutType } from "@/db/programs"
@@ -40,9 +38,11 @@ import { useSyncRefresh } from "@/hooks/useSyncRefresh"
 export function ExerciseEditor({
   workoutTypeId,
   onBack,
+  onSelectExercise,
 }: {
   workoutTypeId: string
   onBack: () => void
+  onSelectExercise: (exerciseId: string) => void
 }) {
   const [exercises, setExercises] = useState<ExerciseTemplate[]>([])
   const [workoutName, setWorkoutName] = useState<string>("")
@@ -50,12 +50,6 @@ export function ExerciseEditor({
   const [addingSets, setAddingSets] = useState("3")
   const [addingReps, setAddingReps] = useState("12")
   const [showAdd, setShowAdd] = useState(false)
-  const [editingNameId, setEditingNameId] = useState<string | null>(null)
-  const [draftName, setDraftName] = useState("")
-  const [editingWeightId, setEditingWeightId] = useState<string | null>(null)
-  const [draftWeight, setDraftWeight] = useState("")
-  const [editingRepsId, setEditingRepsId] = useState<string | null>(null)
-  const [draftReps, setDraftReps] = useState("")
   const [editingTitle, setEditingTitle] = useState(false)
   const [titleDraft, setTitleDraft] = useState("")
 
@@ -79,6 +73,16 @@ export function ExerciseEditor({
 
   useSyncRefresh(refresh)
 
+  async function commitTitle() {
+    const trimmed = titleDraft.trim()
+    if (trimmed && trimmed !== workoutName) {
+      await renameWorkoutType(workoutTypeId, trimmed)
+    }
+    setEditingTitle(false)
+    setTitleDraft("")
+    await refresh()
+  }
+
   async function handleAdd() {
     const name = addingName.trim()
     const sets = parseInt(addingSets, 10)
@@ -89,61 +93,6 @@ export function ExerciseEditor({
     setAddingSets("3")
     setAddingReps("12")
     setShowAdd(false)
-    await refresh()
-  }
-
-  async function handleDelete(id: string) {
-    await deleteExercise(id)
-    await refresh()
-  }
-
-  async function handleSetsChange(id: string, sets: string) {
-    const n = parseInt(sets, 10)
-    if (n > 0) await updateExercise(id, { targetSets: n })
-    await refresh()
-  }
-
-  async function commitName(id: string) {
-    const trimmed = draftName.trim()
-    if (trimmed) await updateExercise(id, { name: trimmed })
-    setEditingNameId(null)
-    setDraftName("")
-    await refresh()
-  }
-
-  async function commitWeight(id: string) {
-    const raw = draftWeight.trim().replace(",", ".")
-    if (raw === "") {
-      await updateExercise(id, { targetWeight: undefined })
-    } else {
-      const n = parseFloat(raw)
-      if (!isNaN(n) && n >= 0) await updateExercise(id, { targetWeight: n })
-    }
-    setEditingWeightId(null)
-    setDraftWeight("")
-    await refresh()
-  }
-
-  async function commitReps(id: string) {
-    const raw = draftReps.trim()
-    if (raw === "") {
-      await updateExercise(id, { targetReps: undefined })
-    } else {
-      const n = parseInt(raw, 10)
-      if (!isNaN(n) && n > 0) await updateExercise(id, { targetReps: n })
-    }
-    setEditingRepsId(null)
-    setDraftReps("")
-    await refresh()
-  }
-
-  async function commitTitle() {
-    const trimmed = titleDraft.trim()
-    if (trimmed && trimmed !== workoutName) {
-      await renameWorkoutType(workoutTypeId, trimmed)
-    }
-    setEditingTitle(false)
-    setTitleDraft("")
     await refresh()
   }
 
@@ -239,42 +188,12 @@ export function ExerciseEditor({
               items={exercises.map((e) => e.id)}
               strategy={verticalListSortingStrategy}
             >
-              <ul className="divide-y divide-border rounded-xl border border-border bg-surface overflow-hidden">
-                {exercises.map((ex, i) => (
+              <ul className="space-y-2">
+                {exercises.map((ex) => (
                   <SortableExerciseRow
                     key={ex.id}
                     exercise={ex}
-                    index={i}
-                    editingName={editingNameId === ex.id}
-                    editingWeight={editingWeightId === ex.id}
-                    editingReps={editingRepsId === ex.id}
-                    draftName={draftName}
-                    draftWeight={draftWeight}
-                    draftReps={draftReps}
-                    onStartEditName={() => {
-                      setEditingNameId(ex.id)
-                      setDraftName(ex.name)
-                    }}
-                    onChangeName={setDraftName}
-                    onCommitName={() => commitName(ex.id)}
-                    onStartEditWeight={() => {
-                      setEditingWeightId(ex.id)
-                      setDraftWeight(
-                        ex.targetWeight != null ? String(ex.targetWeight) : "",
-                      )
-                    }}
-                    onChangeWeight={setDraftWeight}
-                    onCommitWeight={() => commitWeight(ex.id)}
-                    onStartEditReps={() => {
-                      setEditingRepsId(ex.id)
-                      setDraftReps(
-                        ex.targetReps != null ? String(ex.targetReps) : "",
-                      )
-                    }}
-                    onChangeReps={setDraftReps}
-                    onCommitReps={() => commitReps(ex.id)}
-                    onSetsChange={(v) => handleSetsChange(ex.id, v)}
-                    onDelete={() => handleDelete(ex.id)}
+                    onSelect={() => onSelectExercise(ex.id)}
                   />
                 ))}
               </ul>
@@ -341,44 +260,10 @@ export function ExerciseEditor({
 
 function SortableExerciseRow({
   exercise,
-  index,
-  editingName,
-  editingWeight,
-  editingReps,
-  draftName,
-  draftWeight,
-  draftReps,
-  onStartEditName,
-  onChangeName,
-  onCommitName,
-  onStartEditWeight,
-  onChangeWeight,
-  onCommitWeight,
-  onStartEditReps,
-  onChangeReps,
-  onCommitReps,
-  onSetsChange,
-  onDelete,
+  onSelect,
 }: {
   exercise: ExerciseTemplate
-  index: number
-  editingName: boolean
-  editingWeight: boolean
-  editingReps: boolean
-  draftName: string
-  draftWeight: string
-  draftReps: string
-  onStartEditName: () => void
-  onChangeName: (v: string) => void
-  onCommitName: () => void
-  onStartEditWeight: () => void
-  onChangeWeight: (v: string) => void
-  onCommitWeight: () => void
-  onStartEditReps: () => void
-  onChangeReps: (v: string) => void
-  onCommitReps: () => void
-  onSetsChange: (v: string) => void
-  onDelete: () => void
+  onSelect: () => void
 }) {
   const {
     attributes,
@@ -399,133 +284,58 @@ function SortableExerciseRow({
       ref={setNodeRef}
       style={style}
       className={cn(
-        "flex items-stretch gap-1 px-1.5 py-2 bg-surface",
+        "flex items-stretch gap-1 rounded-xl border border-border bg-surface overflow-hidden",
         isDragging && "opacity-60 shadow-lg z-10 relative",
       )}
     >
       <button
         {...attributes}
         {...listeners}
-        className="p-1.5 text-text-secondary hover:text-text-primary touch-none cursor-grab active:cursor-grabbing flex items-center justify-center"
+        className="px-2 text-text-secondary hover:text-text-primary touch-none cursor-grab active:cursor-grabbing flex items-center justify-center"
         aria-label="Перетягнути"
       >
         <GripVertical size={16} />
       </button>
-      <div className="flex-1 min-w-0 flex flex-col gap-1.5">
-        <div className="flex items-center gap-2 min-h-[28px]">
-          <span className="font-display text-[12px] text-text-secondary w-5 text-center shrink-0">
-            {String(index + 1).padStart(2, "0")}
-          </span>
-          {editingName ? (
-            <Input
-              autoFocus
-              value={draftName}
-              onChange={(e) => onChangeName(e.target.value)}
-              onBlur={onCommitName}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") onCommitName()
-                if (e.key === "Escape") onCommitName()
-              }}
-              className="flex-1 h-9 bg-bg border-border text-text-primary px-2 text-[15px]"
-            />
-          ) : (
-            <button
-              onClick={onStartEditName}
-              className="flex-1 font-sans font-medium text-text-primary text-[15px] min-w-0 truncate text-left"
-            >
-              {exercise.name}
-            </button>
-          )}
-        </div>
-        <div className="flex items-center gap-1.5 pl-7">
-          {editingWeight ? (
-            <Input
-              autoFocus
-              type="number"
-              inputMode="decimal"
-              step="0.5"
-              value={draftWeight}
-              onChange={(e) => onChangeWeight(e.target.value)}
-              onBlur={onCommitWeight}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") onCommitWeight()
-                if (e.key === "Escape") onCommitWeight()
-              }}
-              className="w-16 h-8 bg-bg border-border text-center font-display text-text-primary px-1"
-              min="0"
-            />
-          ) : (
-            <button
-              onClick={onStartEditWeight}
-              className={cn(
-                "h-8 px-2 rounded-md border border-border bg-bg flex items-center gap-1 font-display text-[12px]",
-                exercise.targetWeight != null
-                  ? "text-text-primary"
-                  : "text-text-secondary",
-              )}
-              aria-label="Цільова вага"
-            >
-              {exercise.targetWeight != null ? exercise.targetWeight : "—"}
-              <span className="text-text-secondary text-[10px] uppercase tracking-wider">
-                кг
-              </span>
-            </button>
-          )}
-          <div className="flex items-center gap-1 ml-1">
-            <Input
-              type="number"
-              value={exercise.targetSets}
-              onChange={(e) => onSetsChange(e.target.value)}
-              className="w-11 h-8 bg-bg border-border text-center font-display text-text-primary px-1 text-[13px]"
-              min="1"
-            />
-            <span className="font-display text-[10px] uppercase tracking-wider text-text-secondary">
-              підх
-            </span>
-            <span className="font-display text-text-secondary text-[13px] mx-0.5">×</span>
-            {editingReps ? (
-              <Input
-                autoFocus
-                type="number"
-                inputMode="numeric"
-                step="1"
-                value={draftReps}
-                onChange={(e) => onChangeReps(e.target.value)}
-                onBlur={onCommitReps}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") onCommitReps()
-                  if (e.key === "Escape") onCommitReps()
-                }}
-                className="w-11 h-8 bg-bg border-border text-center font-display text-text-primary px-1 text-[13px]"
-                min="1"
-              />
-            ) : (
-              <button
-                onClick={onStartEditReps}
-                className={cn(
-                  "w-11 h-8 rounded-md border border-border bg-bg flex items-center justify-center font-display text-[13px]",
-                  exercise.targetReps != null
-                    ? "text-text-primary"
-                    : "text-text-secondary",
-                )}
-                aria-label="Цільові повтори"
-              >
-                {exercise.targetReps != null ? exercise.targetReps : "—"}
-              </button>
-            )}
-            <span className="font-display text-[10px] uppercase tracking-wider text-text-secondary">
-              повт
-            </span>
-          </div>
-        </div>
-      </div>
       <button
-        onClick={onDelete}
-        className="p-2 text-text-secondary hover:text-destructive min-h-[44px] min-w-[40px] flex items-center justify-center self-start"
-        aria-label="Видалити вправу"
+        onClick={onSelect}
+        className="group flex-1 min-w-0 text-left px-2 py-3.5 space-y-2 active:bg-bg/50 transition-colors"
       >
-        <Trash2 size={16} />
+        <div className="flex items-center gap-2">
+          <div className="flex-1 min-w-0 font-display font-medium text-text-primary text-[16px] leading-tight tracking-tight truncate">
+            {exercise.name}
+          </div>
+          <ArrowRight
+            size={16}
+            className="shrink-0 text-text-secondary/50 group-active:translate-x-0.5 transition-transform"
+          />
+        </div>
+        <dl className="flex items-baseline gap-x-4 gap-y-1 flex-wrap">
+          <SummaryItem label="Підходи" value={String(exercise.targetSets)} />
+          <SummaryItem
+            label="Повтори"
+            value={exercise.targetReps != null ? String(exercise.targetReps) : "—"}
+          />
+          <SummaryItem
+            label="Вага"
+            value={
+              exercise.targetWeight != null ? `${exercise.targetWeight} кг` : "—"
+            }
+          />
+        </dl>
       </button>
     </li>
+  )
+}
+
+function SummaryItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-baseline gap-1.5">
+      <dt className="font-display text-[10px] uppercase tracking-[0.15em] text-text-secondary">
+        {label}
+      </dt>
+      <dd className="font-display text-[13px] text-text-primary tabular-nums">
+        {value}
+      </dd>
+    </div>
   )
 }
