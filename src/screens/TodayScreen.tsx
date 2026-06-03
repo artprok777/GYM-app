@@ -8,6 +8,9 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { ExerciseCard } from "@/components/ExerciseCard"
 import { SetLoggerSheet } from "@/components/SetLoggerSheet"
+import { StreakBadge } from "@/components/StreakBadge"
+import { WeekStrip } from "@/components/WeekStrip"
+import { DaySheet } from "@/components/DaySheet"
 import { listExercises } from "@/db/exercises"
 import { listPrograms, listWorkoutTypes } from "@/db/programs"
 import { getTodaysWorkoutType } from "@/db/schedule"
@@ -34,6 +37,7 @@ export default function TodayScreen() {
   const [session, setSession] = useState<WorkoutSession | null>(null)
   const [items, setItems] = useState<ExerciseState[]>([])
   const [openExercise, setOpenExercise] = useState<ExerciseTemplate | null>(null)
+  const [openDay, setOpenDay] = useState<number | null>(null)
 
   const loadTypes = useCallback(async () => {
     const programs = await listPrograms()
@@ -102,31 +106,36 @@ export default function TodayScreen() {
           <p className="font-display text-[11px] uppercase tracking-[0.2em] text-text-secondary">
             {ukDayName(today)}
           </p>
-          <DropdownMenu>
-            <DropdownMenuTrigger className="group flex items-center gap-2 focus:outline-none">
-              <h1 className="font-display text-[34px] leading-none font-medium tracking-tight text-text-primary">
-                {selectedType?.name ?? "Обери тренування"}
-              </h1>
-              <ChevronDown
-                size={22}
-                className="text-accent group-data-[state=open]:rotate-180 transition-transform"
-              />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="start"
-              className="bg-surface border-border min-w-[180px]"
-            >
-              {allTypes.map((t) => (
-                <DropdownMenuItem
-                  key={t.id}
-                  onClick={() => setSelectedTypeId(t.id)}
-                  className="text-text-primary focus:bg-bg focus:text-text-primary"
-                >
-                  {t.name}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex items-center justify-between gap-3">
+            <DropdownMenu>
+              <DropdownMenuTrigger className="group flex items-center gap-2 focus:outline-none">
+                <h1 className="font-display text-[34px] leading-none font-medium tracking-tight text-text-primary">
+                  {selectedType?.name ?? "Обери тренування"}
+                </h1>
+                <ChevronDown
+                  size={22}
+                  className="text-accent group-data-[state=open]:rotate-180 transition-transform"
+                />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="start"
+                className="bg-surface border-border min-w-[180px]"
+              >
+                {allTypes.map((t) => (
+                  <DropdownMenuItem
+                    key={t.id}
+                    onClick={() => setSelectedTypeId(t.id)}
+                    className="text-text-primary focus:bg-bg focus:text-text-primary"
+                  >
+                    {t.name}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <StreakBadge />
+          </div>
+
+          <WeekStrip onDayTap={setOpenDay} />
 
           {items.length > 0 && (
             <div className="flex items-center gap-1.5">
@@ -178,6 +187,10 @@ export default function TodayScreen() {
             void loadSession()
           }}
         />
+      )}
+
+      {openDay != null && (
+        <DaySheet date={openDay} onClose={() => setOpenDay(null)} />
       )}
     </>
   )

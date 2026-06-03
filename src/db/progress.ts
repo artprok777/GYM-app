@@ -1,5 +1,9 @@
 import { db } from "./client"
 import type { LoggedSet } from "./schema"
+import { getSchedule } from "./schedule"
+import { listExercises } from "./exercises"
+import { getSessionSets } from "./sessions"
+import { listPrograms, listWorkoutTypes } from "./programs"
 
 export interface ExerciseHistoryPoint {
   sessionId: string
@@ -151,7 +155,7 @@ export interface WeekStat {
   count: number
 }
 
-function mondayOf(ts: number): number {
+export function mondayOf(ts: number): number {
   const d = new Date(ts)
   const day = d.getDay()
   const diff = day === 0 ? -6 : 1 - day
@@ -181,4 +185,111 @@ export async function getSessionDatesForWorkoutType(
     await db.sessions.where("workoutTypeId").equals(workoutTypeId).toArray()
   ).filter((s) => s.deletedAt == null)
   return sessions.map((s) => s.date).sort((a, b) => a - b)
+}
+
+// --- Streak + Week Strip ---
+
+const DAY_MS = 86_400_000
+
+function startOfDay(ts = Date.now()): number {
+  const d = new Date(ts)
+  d.setHours(0, 0, 0, 0)
+  return d.getTime()
+}
+
+export type DayState = "done" | "partial" | "missed" | "rest" | "future" | "today"
+
+export interface DayCompletion {
+  date: number
+  dayOfWeek: number
+  state: DayState
+  workoutTypeId: string | null
+  workoutName?: string
+  totalSets: number
+  exerciseCount: number
+  completedExercises: number
+}
+
+async function computeDayState(date: number): Promise<DayCompletion> {
+  const dayOfWeek = new Date(date).getDay()
+  const todayMs = startOfDay()
+  const isToday = date === todayMs
+
+  if (date > todayMs) {
+    return { date, dayOfWeek, state: "future", workoutTypeId: null, totalSets: 0, exerciseCount: 0, completedExercises: 0 }
+  }
+
+  const schedule = await getSchedule()
+  const workoutTypeId = schedule.find(e => e.dayOfWeek === dayOfWeek)?.workoutTypeId ?? null
+
+  if (workoutTypeId == null) {
+    return { date, dayOfWeek, state: "rest", workoutTypeId: null, totalSets: 0, exerciseCount: 0, completedExercises: 0 }
+  }
+
+  const programs = await listPrograms()
+  let workoutName: string | undefined
+  if (programs[0]) {
+    const types = await listWorkoutTypes(programs[0].id)
+    workoutName = types.find(t => t.id === workoutTypeId)?.name
+  }
+
+  const exercises = await listExercises(workoutTypeId)
+  const exerciseCount = exercises.length
+
+  const session = await db.sessions
+    .where("date")
+    .equals(date)
+    .and(s => s.workoutTypeId === workoutTypeId && s.deletedAt == null)
+    .first()
+
+  if (!session || exerciseCount === 0) {
+    return { date, dayOfWeek, state: isToday ? "today" : "missed", workoutTypeId, workoutName, totalSets: 0, exerciseCount, completedExercises: 0 }
+  }
+
+  const allSets = await getSessionSets(session.id)
+  const totalSets = allSets.length
+
+  let completedExercises = 0
+  for (const ex of exercises) {
+    const logged = allSets.filter(s => s.exerciseName === ex.name).length
+    if (logged >= ex.targetSets) completedExercises++
+  }
+
+  let state: DayState
+  if (completedExercises === exerciseCount) {
+    state = "done"
+  } else if (totalSets > 0) {
+    state = isToday ? "today" : "partial"
+  } else {
+    state = isToday ? "today" : "missed"
+  }
+
+  return { date, dayOfWeek, state, workoutTypeId, workoutName, totalSets, exerciseCount, completedExercises }
+}
+
+export async function getWeekCompletions(weekStartMs: number): Promise<DayCompletion[]> {
+  const results: DayCompletion[] = []
+  for (let i = 0; i < 7; i++) {
+    results.push(await computeDayState(weekStartMs + i * DAY_MS))
+  }
+  return results
+}
+
+export async function getCurrentStreak(): Promise<number> {
+  let cursor = startOfDay()
+  let count = 0
+  for (let i = 0; i < 365; i++) {
+    const c = await computeDayState(cursor)
+    if (c.state === "done") {
+      count++
+    } else if (c.state === "rest") {
+      // neutral — skip
+    } else if (c.state === "today") {
+      // day still in progress, don't break streak
+    } else {
+      break
+    }
+    cursor -= DAY_MS
+  }
+  return count
 }
