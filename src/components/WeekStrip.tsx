@@ -111,6 +111,25 @@ export function WeekStrip({ onDayTap }: { onDayTap: (date: number) => void }) {
         <span className="font-display text-[10px] uppercase tracking-[0.15em] text-text-secondary">
           {formatWeekRange(weekStart)}
         </span>
+        <AnimatePresence>
+          {weekStart < currentWeekStart && (
+            <motion.button
+              key="today-btn"
+              initial={{ opacity: 0, scale: 0.6 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.6 }}
+              transition={{ type: "spring", stiffness: 500, damping: 30 }}
+              className="w-[22px] h-[22px] rounded-full bg-border flex items-center justify-center"
+              onClick={() => {
+                setDirection(-1)
+                setWeekStart(currentWeekStart)
+              }}
+              aria-label="Повернутись до поточного тижня"
+            >
+              <div className="w-[7px] h-[7px] rounded-full bg-text-secondary" />
+            </motion.button>
+          )}
+        </AnimatePresence>
       </div>
 
       <motion.div
