@@ -12,7 +12,7 @@ import type { LoggedSet } from "@/db/schema"
 describe("formatWeight", () => {
   it("strips trailing zeros", () => {
     expect(formatWeight(80)).toBe("80")
-    expect(formatWeight(82.5)).toBe("82.5")
+    expect(formatWeight(82.5)).toBe("82,5")
     expect(formatWeight(82.0)).toBe("82")
   })
 })

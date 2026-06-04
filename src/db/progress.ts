@@ -105,6 +105,86 @@ export interface WorkoutExerciseProgress {
   latestDate: number
 }
 
+export interface ExerciseProgressSummary {
+  pr: number | null
+  latestWeight: number | null
+  previousWeight: number | null
+  deltaWeight: number | null
+  deltaPercent: number | null
+  latestLoad: number | null
+  previousLoad: number | null
+  loadDelta: number | null
+  loadDeltaPercent: number | null
+}
+
+export interface WorkoutProgressSummaryRow extends WorkoutExerciseProgress {
+  deltaWeight: number
+  deltaPercent: number | null
+}
+
+export interface WorkoutProgressSummary {
+  sessionCount: number
+  progressExerciseCount: number
+  biggestGain: WorkoutProgressSummaryRow | null
+  rows: WorkoutProgressSummaryRow[]
+}
+
+function percentChange(first: number, latest: number): number | null {
+  if (first === 0) return null
+  return ((latest - first) / first) * 100
+}
+
+export function summarizeExerciseProgress(
+  history: ExerciseHistoryPoint[],
+  pr: number | null,
+): ExerciseProgressSummary {
+  const sorted = [...history].sort((a, b) => a.date - b.date)
+  const latest = sorted.at(-1)
+  const previous = sorted.at(-2)
+
+  return {
+    pr,
+    latestWeight: latest?.maxWeight ?? null,
+    previousWeight: previous?.maxWeight ?? null,
+    deltaWeight:
+      latest && previous ? latest.maxWeight - previous.maxWeight : null,
+    deltaPercent:
+      latest && previous
+        ? percentChange(previous.maxWeight, latest.maxWeight)
+        : null,
+    latestLoad: latest?.totalVolume ?? null,
+    previousLoad: previous?.totalVolume ?? null,
+    loadDelta:
+      latest && previous ? latest.totalVolume - previous.totalVolume : null,
+    loadDeltaPercent:
+      latest && previous
+        ? percentChange(previous.totalVolume, latest.totalVolume)
+        : null,
+  }
+}
+
+export function summarizeWorkoutProgress(
+  progress: WorkoutExerciseProgress[],
+  sessionDates: number[],
+): WorkoutProgressSummary {
+  const rows = progress.map((p) => ({
+    ...p,
+    deltaWeight: p.latestWeight - p.firstWeight,
+    deltaPercent: percentChange(p.firstWeight, p.latestWeight),
+  }))
+  const biggestGain =
+    rows.length > 0
+      ? [...rows].sort((a, b) => b.deltaWeight - a.deltaWeight)[0]
+      : null
+
+  return {
+    sessionCount: sessionDates.length,
+    progressExerciseCount: rows.length,
+    biggestGain,
+    rows,
+  }
+}
+
 export async function getWorkoutProgress(
   workoutTypeId: string,
   exerciseNames: string[],

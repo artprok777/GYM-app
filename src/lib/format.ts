@@ -1,7 +1,7 @@
 import type { LoggedSet } from "@/db/schema"
 
 export function formatWeight(w: number): string {
-  return Number(w).toString()
+  return Number(w).toString().replace(".", ",")
 }
 
 export function formatLastSession(sets: LoggedSet[]): string {

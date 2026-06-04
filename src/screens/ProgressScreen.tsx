@@ -19,35 +19,35 @@ export default function ProgressScreen() {
       </div>
 
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="bg-surface border border-border w-full grid grid-cols-3 h-11 p-1 rounded-xl">
+        <TabsList className="bg-surface border border-border w-full grid grid-cols-3 min-h-[60px] p-1 rounded-xl">
           <TabsTrigger
             value="exercise"
-            className="data-[state=active]:bg-accent data-[state=active]:text-bg text-text-secondary rounded-lg text-[13px] font-medium"
+            className="h-[52px] data-[state=active]:bg-accent data-[state=active]:text-bg text-text-secondary rounded-lg text-[13px] font-medium"
           >
             Вправа
           </TabsTrigger>
           <TabsTrigger
             value="workout"
-            className="data-[state=active]:bg-accent data-[state=active]:text-bg text-text-secondary rounded-lg text-[13px] font-medium"
+            className="h-[52px] data-[state=active]:bg-accent data-[state=active]:text-bg text-text-secondary rounded-lg text-[13px] font-medium"
           >
             Тренування
           </TabsTrigger>
           <TabsTrigger
             value="overall"
-            className="data-[state=active]:bg-accent data-[state=active]:text-bg text-text-secondary rounded-lg text-[13px] font-medium"
+            className="h-[52px] data-[state=active]:bg-accent data-[state=active]:text-bg text-text-secondary rounded-lg text-[13px] font-medium"
           >
             Загалом
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="exercise" className="mt-5">
-          <ProgressByExercise />
+          {tab === "exercise" && <ProgressByExercise />}
         </TabsContent>
         <TabsContent value="workout" className="mt-5">
-          <ProgressByWorkout />
+          {tab === "workout" && <ProgressByWorkout />}
         </TabsContent>
         <TabsContent value="overall" className="mt-5">
-          <ProgressOverall />
+          {tab === "overall" && <ProgressOverall />}
         </TabsContent>
       </Tabs>
     </div>
