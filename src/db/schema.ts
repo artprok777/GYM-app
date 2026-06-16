@@ -38,6 +38,7 @@ export interface WorkoutSession extends Syncable {
   date: number // start of day, unix ms
   workoutTypeId: string
   notes?: string
+  celebratedAt?: number // legacy synced field from the removed confetti feature
 }
 
 export interface LoggedSet extends Syncable {

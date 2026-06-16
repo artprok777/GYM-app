@@ -39,6 +39,29 @@ export default defineConfig({
   resolve: {
     alias: { "@": path.resolve(__dirname, "./src") },
   },
+  build: {
+    rolldownOptions: {
+      output: {
+        manualChunks(id: string) {
+          if (!id.includes("node_modules")) return
+          if (id.includes("/react/") || id.includes("/react-dom/")) {
+            return "react"
+          }
+          if (id.includes("@supabase")) return "supabase"
+          if (id.includes("recharts") || id.includes("d3-")) return "charts"
+          if (
+            id.includes("framer-motion") ||
+            id.includes("@radix-ui") ||
+            id.includes("@dnd-kit") ||
+            id.includes("lucide-react")
+          ) {
+            return "ui"
+          }
+          return "vendor"
+        },
+      },
+    },
+  },
   test: {
     globals: true,
     environment: "jsdom",

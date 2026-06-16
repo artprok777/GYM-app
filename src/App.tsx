@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react"
+import { lazy, Suspense, useEffect, useState } from "react"
 import { TabBar, type Tab } from "./components/TabBar"
 import TodayScreen from "./screens/TodayScreen"
-import ProgramScreen from "./screens/ProgramScreen"
-import ProgressScreen from "./screens/ProgressScreen"
 import { bootstrap, startSync } from "./db/sync"
+
+const ProgramScreen = lazy(() => import("./screens/ProgramScreen"))
+const ProgressScreen = lazy(() => import("./screens/ProgressScreen"))
 
 export default function App() {
   const [tab, setTab] = useState<Tab>("today")
@@ -33,8 +34,10 @@ export default function App() {
         style={{ paddingTop: "env(safe-area-inset-top)" }}
       >
         {tab === "today" && <TodayScreen />}
-        {tab === "program" && <ProgramScreen />}
-        {tab === "progress" && <ProgressScreen />}
+        <Suspense fallback={<div className="px-5 py-6 text-text-secondary" />}>
+          {tab === "program" && <ProgramScreen />}
+          {tab === "progress" && <ProgressScreen />}
+        </Suspense>
       </main>
       <TabBar active={tab} onChange={setTab} />
     </div>

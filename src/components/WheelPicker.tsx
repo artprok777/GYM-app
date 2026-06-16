@@ -21,7 +21,7 @@ export function WheelPicker({ values, value, onChange, formatValue, unit }: Whee
     if (idx >= 0 && containerRef.current) {
       containerRef.current.scrollTop = idx * ITEM_H
     }
-  }, [])
+  }, [value, values])
 
   const commit = useCallback(() => {
     if (!containerRef.current) return
