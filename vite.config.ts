@@ -11,6 +11,8 @@ export default defineConfig({
       workbox: {
         skipWaiting: true,
         clientsClaim: true,
+        // Precache self-hosted fonts so the UI renders correctly offline
+        globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
       },
       includeAssets: ["apple-touch-icon.png"],
       manifest: {

@@ -38,16 +38,21 @@ export default function TodayScreen() {
   const [items, setItems] = useState<ExerciseState[]>([])
   const [openExercise, setOpenExercise] = useState<ExerciseTemplate | null>(null)
   const [openDay, setOpenDay] = useState<number | null>(null)
+  const [loading, setLoading] = useState(true)
 
   const loadTypes = useCallback(async () => {
     const programs = await listPrograms()
-    if (!programs[0]) return
+    if (!programs[0]) {
+      setLoading(false)
+      return
+    }
     const types = await listWorkoutTypes(programs[0].id)
     setAllTypes(types)
     if (selectedTypeId === null) {
       const scheduledId = await getTodaysWorkoutType()
       setSelectedTypeId(scheduledId ?? types[0]?.id ?? null)
     }
+    setLoading(false)
   }, [selectedTypeId])
 
   const loadSession = useCallback(async () => {
@@ -84,6 +89,10 @@ export default function TodayScreen() {
 
   const today = new Date().getDay()
   const selectedType = allTypes.find((t) => t.id === selectedTypeId)
+
+  if (loading) {
+    return <TodaySkeleton />
+  }
 
   if (allTypes.length === 0) {
     return (
@@ -193,6 +202,33 @@ export default function TodayScreen() {
         <DaySheet date={openDay} onClose={() => setOpenDay(null)} />
       )}
     </>
+  )
+}
+
+function TodaySkeleton() {
+  return (
+    <div className="px-5 py-6 space-y-6 animate-pulse" aria-hidden="true">
+      <div className="space-y-3">
+        <div className="h-3 w-20 rounded bg-surface" />
+        <div className="flex items-center justify-between gap-3">
+          <div className="h-9 w-44 rounded-lg bg-surface" />
+          <div className="h-4 w-14 rounded bg-surface" />
+        </div>
+        <div className="grid grid-cols-7 gap-1">
+          {Array.from({ length: 7 }).map((_, i) => (
+            <div key={i} className="flex flex-col items-center gap-[3px] h-[54px] justify-center">
+              <div className="h-2 w-3 rounded bg-surface" />
+              <div className="w-[28px] h-[28px] rounded-full bg-surface" />
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="space-y-2">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="h-[92px] rounded-xl border border-border bg-surface" />
+        ))}
+      </div>
+    </div>
   )
 }
 
