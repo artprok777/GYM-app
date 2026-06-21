@@ -12,23 +12,24 @@ import { listExercises } from "@/db/exercises"
 import {
   getWorkoutProgress,
   getSessionDatesForWorkoutType,
+  summarizeWorkoutProgress,
+  type WorkoutProgressSummary,
 } from "@/db/progress"
 import type { WorkoutType } from "@/db/schema"
 import { formatWeight } from "@/lib/format"
 import { useSyncRefresh } from "@/hooks/useSyncRefresh"
 
-interface Row {
-  name: string
-  first: number
-  latest: number
-  delta: number
+const EMPTY_SUMMARY: WorkoutProgressSummary = {
+  sessionCount: 0,
+  progressExerciseCount: 0,
+  biggestGain: null,
+  rows: [],
 }
 
 export function ProgressByWorkout() {
   const [types, setTypes] = useState<WorkoutType[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [rows, setRows] = useState<Row[]>([])
-  const [dates, setDates] = useState<number[]>([])
+  const [summary, setSummary] = useState<WorkoutProgressSummary>(EMPTY_SUMMARY)
 
   const loadTypes = useCallback(async () => {
     const programs = await listPrograms()
@@ -45,17 +46,8 @@ export function ProgressByWorkout() {
       selectedId,
       ex.map((e) => e.name),
     )
-    const computed: Row[] = progress.map((p) => ({
-      name: p.exerciseName,
-      first: p.firstWeight,
-      latest: p.latestWeight,
-      delta:
-        p.firstWeight === 0
-          ? 0
-          : ((p.latestWeight - p.firstWeight) / p.firstWeight) * 100,
-    }))
-    setRows(computed)
-    setDates(await getSessionDatesForWorkoutType(selectedId))
+    const sessionDates = await getSessionDatesForWorkoutType(selectedId)
+    setSummary(summarizeWorkoutProgress(progress, sessionDates))
   }, [selectedId])
 
   useEffect(() => {
@@ -84,7 +76,7 @@ export function ProgressByWorkout() {
   return (
     <div className="space-y-4">
       <DropdownMenu>
-        <DropdownMenuTrigger className="flex items-center gap-2 bg-surface border border-border h-10 px-3 rounded-md text-text-primary text-sm data-[state=open]:border-accent focus:outline-none">
+        <DropdownMenuTrigger className="flex min-h-[52px] items-center gap-2 bg-surface border border-border px-3 rounded-md text-text-primary text-sm data-[state=open]:border-accent focus:outline-none">
           <span>{selectedName ?? "Тренування"}</span>
           <ChevronDown size={14} />
         </DropdownMenuTrigger>
@@ -101,78 +93,119 @@ export function ProgressByWorkout() {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {rows.length === 0 ? (
+      {summary.rows.length === 0 ? (
         <p className="text-text-secondary text-sm py-8 text-center">
           Зроби це тренування хоча б раз, щоб побачити прогрес.
         </p>
       ) : (
-        <div className="space-y-2">
-          {rows.map((r) => {
-            const Icon = r.delta > 1 ? ArrowUp : r.delta < -1 ? ArrowDown : ArrowRight
-            const color =
-              r.delta > 1
-                ? "text-success"
-                : r.delta < -1
-                  ? "text-destructive"
-                  : "text-text-secondary"
-            return (
-              <Card
-                key={r.name}
-                className="bg-surface border-border p-3 flex items-center justify-between gap-3"
-              >
-                <span className="font-display flex-1 text-text-primary min-w-0 truncate">
-                  {r.name}
-                </span>
-                <span className="font-display text-text-secondary text-sm shrink-0">
-                  {formatWeight(r.first)} → {formatWeight(r.latest)} кг
-                </span>
-                <span
-                  className={`font-display flex items-center gap-1 ${color} w-16 justify-end shrink-0`}
+        <div className="space-y-4">
+          <div className="grid grid-cols-3 rounded-lg border border-border bg-surface divide-x divide-border overflow-hidden">
+            <Metric label="Сесій" value={String(summary.sessionCount)} />
+            <Metric
+              label="Вправ"
+              value={String(summary.progressExerciseCount)}
+            />
+            <Metric
+              label="Топ приріст"
+              value={formatSignedWeight(summary.biggestGain?.deltaWeight ?? null)}
+              tone={summary.biggestGain?.deltaWeight ?? null}
+            />
+          </div>
+
+          <div className="space-y-2">
+            {summary.rows.map((r) => {
+              const Icon =
+                r.deltaWeight > 0
+                  ? ArrowUp
+                  : r.deltaWeight < 0
+                    ? ArrowDown
+                    : ArrowRight
+              const color =
+                r.deltaWeight > 0
+                  ? "text-success"
+                  : r.deltaWeight < 0
+                    ? "text-destructive"
+                    : "text-text-secondary"
+              return (
+                <Card
+                  key={r.exerciseName}
+                  className="bg-surface border-border p-3 min-h-[84px]"
                 >
-                  <Icon size={14} />
-                  {r.delta >= 0 ? "+" : ""}
-                  {r.delta.toFixed(0)}%
-                </span>
-              </Card>
-            )
-          })}
+                  <div className="flex items-start justify-between gap-3">
+                    <span className="font-display flex-1 text-text-primary min-w-0 truncate">
+                      {r.exerciseName}
+                    </span>
+                    <span
+                      className={`font-display flex items-center gap-1 ${color} shrink-0 tabular-nums`}
+                    >
+                      <Icon size={14} />
+                      {formatSignedWeight(r.deltaWeight)}
+                    </span>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between gap-3 text-xs">
+                    <span className="font-display text-text-secondary tabular-nums">
+                      {formatWeight(r.firstWeight)} → {formatWeight(r.latestWeight)} кг
+                    </span>
+                    <span className={`font-display ${color} tabular-nums`}>
+                      {formatPercent(r.deltaPercent)}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-[11px] text-text-secondary">
+                    {formatShortDate(r.firstDate)} → {formatShortDate(r.latestDate)}
+                  </p>
+                </Card>
+              )
+            })}
+          </div>
         </div>
       )}
-
-      <div className="pt-2">
-        <h3 className="text-text-secondary text-xs uppercase tracking-wider mb-2">
-          Зроблено разів:{" "}
-          <span className="font-display text-text-primary">{dates.length}</span>
-        </h3>
-        <SessionCalendar dates={dates} />
-      </div>
     </div>
   )
 }
 
-function SessionCalendar({ dates }: { dates: number[] }) {
-  if (dates.length === 0) {
-    return <p className="text-text-secondary text-xs">Поки немає сесій.</p>
-  }
-  const set = new Set(dates.map((d) => new Date(d).toDateString()))
-  const today = new Date()
-  const cells: { date: Date; done: boolean }[] = []
-  for (let i = 41; i >= 0; i--) {
-    const d = new Date(today)
-    d.setDate(d.getDate() - i)
-    cells.push({ date: d, done: set.has(d.toDateString()) })
-  }
+function Metric({
+  label,
+  value,
+  tone,
+}: {
+  label: string
+  value: string
+  tone?: number | null
+}) {
+  const valueColor =
+    tone == null || tone === 0
+      ? "text-text-primary"
+      : tone > 0
+        ? "text-success"
+        : "text-destructive"
+
   return (
-    <div className="grid grid-cols-7 gap-1.5">
-      {cells.map((c, i) => (
-        <div
-          key={i}
-          title={c.date.toLocaleDateString("uk-UA")}
-          className={`aspect-square rounded-sm ${
-            c.done ? "bg-accent" : "bg-border"
-          }`}
-        />
-      ))}
+    <div className="min-h-[72px] px-3 py-3">
+      <p className="font-display text-[10px] uppercase tracking-[0.2em] text-text-secondary">
+        {label}
+      </p>
+      <p className={`font-display text-xl leading-none tabular-nums mt-2 ${valueColor}`}>
+        {value}
+      </p>
     </div>
   )
+}
+
+function formatSignedWeight(value: number | null): string {
+  if (value == null) return "—"
+  const sign = value > 0 ? "+" : ""
+  return `${sign}${formatWeight(value)} кг`
+}
+
+function formatPercent(value: number | null): string {
+  if (value == null) return "—"
+  const sign = value > 0 ? "+" : ""
+  return `${sign}${value.toFixed(0)}%`
+}
+
+function formatShortDate(ts: number): string {
+  return new Date(ts).toLocaleDateString("uk-UA", {
+    day: "2-digit",
+    month: "short",
+  })
 }

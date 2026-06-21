@@ -13,12 +13,12 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu"
-import { Badge } from "@/components/ui/badge"
 import { ChevronDown } from "lucide-react"
 import { db } from "@/db/client"
 import {
   getExerciseHistory,
   getPersonalRecord,
+  summarizeExerciseProgress,
   type ExerciseHistoryPoint,
 } from "@/db/progress"
 import { formatWeight } from "@/lib/format"
@@ -73,9 +73,13 @@ export function ProgressByExercise() {
           month: "short",
         }),
         weight: p.maxWeight,
-        volume: p.totalVolume,
+        load: p.totalVolume,
       })),
     [history],
+  )
+  const summary = useMemo(
+    () => summarizeExerciseProgress(history, pr),
+    [history, pr],
   )
 
   if (exercises.length === 0) {
@@ -90,7 +94,7 @@ export function ProgressByExercise() {
     <div className="space-y-4">
       <div className="flex gap-2 flex-wrap">
         <DropdownMenu>
-          <DropdownMenuTrigger className="flex items-center gap-2 bg-surface border border-border h-10 px-3 rounded-md text-text-primary text-sm data-[state=open]:border-accent focus:outline-none">
+          <DropdownMenuTrigger className="flex min-h-[52px] items-center gap-2 bg-surface border border-border px-3 rounded-md text-text-primary text-sm data-[state=open]:border-accent focus:outline-none">
             <span>{selected ?? "Вправа"}</span>
             <ChevronDown size={14} />
           </DropdownMenuTrigger>
@@ -108,7 +112,7 @@ export function ProgressByExercise() {
         </DropdownMenu>
 
         <DropdownMenu>
-          <DropdownMenuTrigger className="flex items-center gap-2 bg-surface border border-border h-10 px-3 rounded-md text-text-primary text-sm data-[state=open]:border-accent focus:outline-none">
+          <DropdownMenuTrigger className="flex min-h-[52px] items-center gap-2 bg-surface border border-border px-3 rounded-md text-text-primary text-sm data-[state=open]:border-accent focus:outline-none">
             <span>{range.label}</span>
             <ChevronDown size={14} />
           </DropdownMenuTrigger>
@@ -126,11 +130,18 @@ export function ProgressByExercise() {
         </DropdownMenu>
       </div>
 
-      {pr !== null && (
-        <Badge className="bg-accent-muted text-accent border-0 font-display text-base px-3 py-1.5">
-          PR: {formatWeight(pr)} кг
-        </Badge>
-      )}
+      <div className="grid grid-cols-3 rounded-lg border border-border bg-surface divide-x divide-border overflow-hidden">
+        <Metric label="PR" value={formatNullableWeight(summary.pr)} accent />
+        <Metric
+          label="Остання"
+          value={formatNullableWeight(summary.latestWeight)}
+        />
+        <Metric
+          label="Зміна"
+          value={formatSignedWeight(summary.deltaWeight)}
+          tone={summary.deltaWeight}
+        />
+      </div>
 
       <div>
         <h3 className="text-text-secondary text-xs uppercase tracking-wider mb-2">
@@ -169,8 +180,9 @@ export function ProgressByExercise() {
 
       <div>
         <h3 className="text-text-secondary text-xs uppercase tracking-wider mb-2">
-          Об'єм
+          Навантаження
         </h3>
+        <p className="text-text-secondary text-xs mb-2">вага × повтори</p>
         <div className="h-40 bg-surface rounded-lg p-3 border border-border">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData}>
@@ -191,7 +203,7 @@ export function ProgressByExercise() {
               />
               <Line
                 type="monotone"
-                dataKey="volume"
+                dataKey="load"
                 stroke="#F8F8F8"
                 strokeWidth={1.5}
                 dot={{ fill: "#F8F8F8", r: 2 }}
@@ -203,4 +215,45 @@ export function ProgressByExercise() {
       </div>
     </div>
   )
+}
+
+function Metric({
+  label,
+  value,
+  accent = false,
+  tone,
+}: {
+  label: string
+  value: string
+  accent?: boolean
+  tone?: number | null
+}) {
+  const valueColor = accent
+    ? "text-accent"
+    : tone == null || tone === 0
+      ? "text-text-primary"
+      : tone > 0
+        ? "text-success"
+        : "text-destructive"
+
+  return (
+    <div className="min-h-[72px] px-3 py-3">
+      <p className="font-display text-[10px] uppercase tracking-[0.2em] text-text-secondary">
+        {label}
+      </p>
+      <p className={`font-display text-xl leading-none tabular-nums mt-2 ${valueColor}`}>
+        {value}
+      </p>
+    </div>
+  )
+}
+
+function formatNullableWeight(value: number | null): string {
+  return value == null ? "—" : `${formatWeight(value)} кг`
+}
+
+function formatSignedWeight(value: number | null): string {
+  if (value == null) return "—"
+  const sign = value > 0 ? "+" : ""
+  return `${sign}${formatWeight(value)} кг`
 }

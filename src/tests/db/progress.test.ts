@@ -8,6 +8,8 @@ import {
   getWorkoutProgress,
   getSessionsByWeek,
   getSessionDatesForWorkoutType,
+  summarizeExerciseProgress,
+  summarizeWorkoutProgress,
 } from "@/db/progress"
 
 beforeEach(async () => {
@@ -107,5 +109,63 @@ describe("progress queries", () => {
 
     const dates = await getSessionDatesForWorkoutType("wt-A")
     expect(dates).toEqual([1000, 2000])
+  })
+
+  it("summarizes exercise progress from the selected history range", () => {
+    const summary = summarizeExerciseProgress(
+      [
+        {
+          sessionId: "s1",
+          date: 1000,
+          maxWeight: 80,
+          totalVolume: 1200,
+          sets: 3,
+        },
+        {
+          sessionId: "s2",
+          date: 2000,
+          maxWeight: 92.5,
+          totalVolume: 1500,
+          sets: 3,
+        },
+      ],
+      100,
+    )
+
+    expect(summary.pr).toBe(100)
+    expect(summary.latestWeight).toBe(92.5)
+    expect(summary.previousWeight).toBe(80)
+    expect(summary.deltaWeight).toBe(12.5)
+    expect(summary.deltaPercent).toBeCloseTo(15.625)
+    expect(summary.latestLoad).toBe(1500)
+    expect(summary.loadDelta).toBe(300)
+  })
+
+  it("summarizes workout progress rows and biggest gain", () => {
+    const summary = summarizeWorkoutProgress(
+      [
+        {
+          exerciseName: "Squat",
+          firstWeight: 80,
+          latestWeight: 100,
+          firstDate: 1000,
+          latestDate: 3000,
+        },
+        {
+          exerciseName: "Bench",
+          firstWeight: 60,
+          latestWeight: 65,
+          firstDate: 1000,
+          latestDate: 3000,
+        },
+      ],
+      [1000, 2000, 3000],
+    )
+
+    expect(summary.sessionCount).toBe(3)
+    expect(summary.progressExerciseCount).toBe(2)
+    expect(summary.biggestGain?.exerciseName).toBe("Squat")
+    expect(summary.biggestGain?.deltaWeight).toBe(20)
+    expect(summary.rows[0].deltaPercent).toBe(25)
   })
 })
